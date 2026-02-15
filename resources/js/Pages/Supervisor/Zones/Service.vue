@@ -92,6 +92,8 @@ watch(selectedService, (newService) => {
         form.rate = newService.default_rate || 0;
         // Auto-populate custom_name with service name for catalog services
         form.custom_name = newService.name || '';
+        // Auto-populate remarks from master service if available
+        form.remarks = newService.remarks || '';
     }
 });
 
@@ -158,8 +160,8 @@ const formatCurrency = (value) => {
             <h1 class="text-xl font-bold text-gray-900">ADD SERVICE / REPAIR</h1>
         </div>
 
-        
-        
+
+
 
             <!-- MODE TOGGLE - Screen D Wireframe -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
@@ -182,15 +184,15 @@ const formatCurrency = (value) => {
             <!-- 1. SELECT SERVICE - Screen D Wireframe -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                 <h2 class="text-base font-bold text-gray-800 mb-3 border-b pb-2">1. SELECT SERVICE</h2>
-                
+
                 <div v-if="serviceMode === 'CATALOG'">
                     <select v-model="form.master_service_id" class="w-full p-3 border border-gray-300 rounded-lg h-12 bg-gray-50">
                         <option :value="null">-- Choose Service --</option>
                         <option v-for="service in services" :key="service.id" :value="service.id">
-                            {{ service.name }} ({{ formatCurrency(service.rate) }}/{{ service.unit_type?.toLowerCase() }})
+                            {{ service.name }} ({{ formatCurrency(service.default_rate) }}/{{ service.unit_type?.toLowerCase() }})
                         </option>
                     </select>
-                    
+
                     <div v-if="selectedService" class="mt-3 p-3 bg-gray-100 rounded-lg">
                         <p class="text-sm text-gray-600">
                             <span class="font-medium">*System detects Unit: {{ selectedService.unit_type }}*</span>
@@ -220,7 +222,7 @@ const formatCurrency = (value) => {
             <!-- 2. MEASUREMENTS (Dynamic UI) - Screen D Wireframe -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                 <h2 class="text-base font-bold text-gray-800 mb-3 border-b pb-2">2. MEASUREMENTS</h2>
-                
+
                 <!-- IF UNIT == 'AREA' -->
                 <div v-if="form.unit_type === 'AREA'" class="space-y-4">
                     <!-- Area Mode Toggle -->
@@ -242,7 +244,7 @@ const formatCurrency = (value) => {
                             Enter Area Directly
                         </button>
                     </div>
-                    
+
                     <!-- DIMENSIONS Mode -->
                     <div v-if="areaMode === 'DIMENSIONS'" class="grid grid-cols-2 gap-4">
                         <div>
@@ -254,7 +256,7 @@ const formatCurrency = (value) => {
                             <TextInput id="breadth" v-model="form.breadth" type="number" step="0.01" class="mt-1 h-12 border-gray-300" />
                         </div>
                     </div>
-                    
+
                     <!-- DIRECT Mode -->
                     <div v-if="areaMode === 'DIRECT'">
                         <InputLabel for="manual_area" value="Area (sqft)" class="text-sm font-medium text-gray-700" />
@@ -278,7 +280,7 @@ const formatCurrency = (value) => {
             <!-- 3. RATE & TOTAL - Screen D Wireframe -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                 <h2 class="text-base font-bold text-gray-800 mb-3 border-b pb-2">4. RATE & TOTAL</h2>
-                
+
                 <div class="mb-4">
                     <InputLabel for="rate" value="Rate (₹)" class="text-sm font-medium text-gray-700" />
                     <TextInput id="rate" v-model="form.rate" type="number" step="0.01" class="mt-1 h-12 border-gray-300" />

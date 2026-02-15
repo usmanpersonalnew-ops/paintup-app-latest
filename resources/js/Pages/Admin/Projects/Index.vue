@@ -70,24 +70,24 @@ const deleteProject = (project) => {
         // Use window.location to navigate to the delete URL
         const csrfToken = document.querySelector('meta[name="csrf-token"]');
         const token = csrfToken ? csrfToken.getAttribute('content') : '';
-        
+
         // Create a form and submit it
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = `/admin/projects/${project.id}`;
-        
+
         const methodInput = document.createElement('input');
         methodInput.type = 'hidden';
         methodInput.name = '_method';
         methodInput.value = 'DELETE';
         form.appendChild(methodInput);
-        
+
         const tokenInput = document.createElement('input');
         tokenInput.type = 'hidden';
         tokenInput.name = '_token';
         tokenInput.value = token;
         form.appendChild(tokenInput);
-        
+
         document.body.appendChild(form);
         form.submit();
     }
@@ -179,6 +179,9 @@ const handleDelete = (e) => {
                             <div class="text-sm font-bold text-gray-900">{{ formatCurrency(project.total_amount) }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <Link :href="route('admin.projects.quote', project.id)" class="text-green-600 hover:text-green-900 mr-3" title="View Quote">
+                                📄 Quote
+                            </Link>
                             <Link :href="route('admin.projects.show', project.id)" class="text-blue-600 hover:text-blue-900 mr-3">
                                 Manage
                             </Link>

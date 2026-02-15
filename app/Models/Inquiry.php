@@ -14,12 +14,19 @@ class Inquiry extends Model
         'phone',
         'email',
         'city',
+        'pincode',
+        'whatsapp_enabled',
+        'construction_ongoing',
+        'property_type',
+        'visit_date',
         'source',
         'status',
     ];
 
     protected $casts = [
         'status' => 'string',
+        'whatsapp_enabled' => 'boolean',
+        'visit_date' => 'date',
     ];
 
     public const STATUS_NEW = 'NEW';

@@ -1,14 +1,29 @@
 <script setup>
 import { useForm, Link } from '@inertiajs/vue3';
+import { ref } from 'vue';
+
+const props = defineProps({
+    supervisors: {
+        type: Array,
+        default: () => [],
+    },
+});
 
 const form = useForm({
     client_name: '',
     phone: '',
     location: '',
     status: 'NEW',
+    supervisor_id: null,
+    home_visit_date: '',
+    home_visit_time: '',
+    home_visit_supervisors: [],
 });
 
+const selectedHomeVisitSupervisors = ref([]);
+
 const submit = () => {
+    form.home_visit_supervisors = selectedHomeVisitSupervisors.value;
     form.post(route('admin.projects.store'));
 };
 </script>
@@ -83,6 +98,63 @@ const submit = () => {
                         </select>
                     </div>
 
+                    <!-- Assign Supervisor -->
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-gray-700">Assign Supervisor</label>
+                        <select
+                            v-model="form.supervisor_id"
+                            class="w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                            <option :value="null">Select Supervisor...</option>
+                            <option v-for="supervisor in supervisors" :key="supervisor.id" :value="supervisor.id">
+                                {{ supervisor.name }} ({{ supervisor.email }})
+                            </option>
+                        </select>
+                        <p v-if="form.errors.supervisor_id" class="mt-1 text-sm text-red-600">{{ form.errors.supervisor_id }}</p>
+                    </div>
+
+                    <!-- Home Visits Section -->
+                    <div class="border-t pt-4 mt-4">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Home Visits</h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="mb-2 block text-sm font-medium text-gray-700">Visit Date</label>
+                                <input
+                                    v-model="form.home_visit_date"
+                                    type="date"
+                                    class="w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                                <p v-if="form.errors.home_visit_date" class="mt-1 text-sm text-red-600">{{ form.errors.home_visit_date }}</p>
+                            </div>
+
+                            <div>
+                                <label class="mb-2 block text-sm font-medium text-gray-700">Visit Time</label>
+                                <input
+                                    v-model="form.home_visit_time"
+                                    type="time"
+                                    class="w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                                <p v-if="form.errors.home_visit_time" class="mt-1 text-sm text-red-600">{{ form.errors.home_visit_time }}</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <label class="mb-2 block text-sm font-medium text-gray-700">Select Supervisors for Visit</label>
+                            <select
+                                v-model="selectedHomeVisitSupervisors"
+                                multiple
+                                class="w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[100px]"
+                            >
+                                <option v-for="supervisor in supervisors" :key="supervisor.id" :value="supervisor.id">
+                                    {{ supervisor.name }} ({{ supervisor.email }})
+                                </option>
+                            </select>
+                            <p class="mt-1 text-xs text-gray-500">Hold Ctrl/Cmd to select multiple supervisors</p>
+                            <p v-if="form.errors.home_visit_supervisors" class="mt-1 text-sm text-red-600">{{ form.errors.home_visit_supervisors }}</p>
+                        </div>
+                    </div>
+
                     <div class="flex gap-4 pt-4">
                         <button
                             type="submit"
@@ -91,7 +163,7 @@ const submit = () => {
                         >
                             {{ form.processing ? 'Creating...' : 'Create Project' }}
                         </button>
-                        
+
                         <Link
                             :href="route('admin.projects.index')"
                             class="rounded bg-gray-100 px-4 py-2 text-gray-700 hover:bg-gray-200"

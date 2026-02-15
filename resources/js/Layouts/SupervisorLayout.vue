@@ -5,7 +5,7 @@ import { usePage, Link } from '@inertiajs/vue3';
 const page = usePage();
 const branding = page.props.branding || {};
 const companyName = branding.company_name || 'PaintUp';
-const logoPath = branding.logo_path;
+const logoUrl = branding.logo_url;
 const primaryColor = branding.primary_color || '#2563eb';
 const footerText = branding.footer_text;
 const currentRoute = computed(() => page.url);
@@ -24,8 +24,8 @@ const navItems = [
         <header :style="{ backgroundColor: primaryColor }" class="text-white px-4 py-3 flex items-center justify-between shadow-md">
             <div class="flex items-center gap-2">
                 <img 
-                    v-if="logoPath" 
-                    :src="`/storage/${logoPath}`" 
+                    v-if="logoUrl" 
+                    :src="logoUrl" 
                     :alt="companyName"
                     class="h-8 w-auto"
                 />

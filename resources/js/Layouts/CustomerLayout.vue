@@ -5,7 +5,7 @@ import { Link, usePage, router } from '@inertiajs/vue3';
 const page = usePage();
 const branding = page.props.branding || {};
 const companyName = branding.company_name || 'PaintUp';
-const logoPath = branding.logo_path;
+const logoUrl = branding.logo_url;
 const primaryColor = branding.primary_color || '#2563eb';
 const footerText = branding.footer_text;
 const user = page.props.auth?.customer || page.props.auth?.user;
@@ -43,14 +43,14 @@ const logout = () => {
 <template>
     <div class="min-h-screen bg-gray-50 flex">
         <!-- Mobile Sidebar Overlay -->
-        <div 
-            v-if="mobileMenuOpen" 
+        <div
+            v-if="mobileMenuOpen"
             class="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
             @click="closeMobileMenu"
         ></div>
 
         <!-- Mobile Sidebar -->
-        <aside 
+        <aside
             :class="[
                 'fixed inset-y-0 left-0 w-64 bg-white shadow-lg z-50 transform transition-transform duration-300 md:hidden',
                 mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
@@ -60,9 +60,9 @@ const logout = () => {
             <div :style="{ backgroundColor: primaryColor }" class="p-4">
                 <div class="flex justify-between items-center">
                     <Link href="/customer/dashboard" class="flex items-center gap-2">
-                        <img 
-                            v-if="logoPath" 
-                            :src="`/storage/${logoPath}`" 
+                        <img
+                            v-if="logoUrl"
+                            :src="logoUrl"
                             :alt="companyName"
                             class="h-8 w-auto"
                         />
@@ -147,9 +147,9 @@ const logout = () => {
             <!-- Logo -->
             <div :style="{ backgroundColor: primaryColor }" class="p-4">
                 <Link href="/customer/dashboard" class="flex items-center justify-center">
-                    <img 
-                        v-if="logoPath" 
-                        :src="`/storage/${logoPath}`" 
+                    <img
+                        v-if="logoUrl"
+                        :src="logoUrl"
                         :alt="companyName"
                         class="h-10 w-auto"
                     />
@@ -238,9 +238,9 @@ const logout = () => {
                             </svg>
                         </button>
                         <div class="md:hidden">
-                            <img 
-                                v-if="logoPath" 
-                                :src="`/storage/${logoPath}`" 
+                            <img
+                                v-if="logoUrl"
+                                :src="logoUrl"
                                 :alt="companyName"
                                 class="h-8 w-auto"
                             />

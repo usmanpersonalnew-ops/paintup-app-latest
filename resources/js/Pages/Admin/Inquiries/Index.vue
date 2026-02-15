@@ -21,15 +21,22 @@ watch(search, debounce((value) => {
 
 const bookVisit = (id) => {
     if(confirm('Create a new Home Visit Project from this lead?')) {
-        router.post(route('admin.inquiries.book', id));
+        router.post(route('admin.inquiries.bookVisit', id));
     }
 };
 
 const formatDate = (dateString) => {
     if (!dateString) return '';
-    return new Date(dateString).toLocaleDateString('en-IN', { 
-        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' 
-    });
+    try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'short',
+            ...(dateString.includes('T') ? { hour: '2-digit', minute: '2-digit' } : {})
+        });
+    } catch (e) {
+        return dateString;
+    }
 };
 </script>
 
@@ -40,9 +47,9 @@ const formatDate = (dateString) => {
                 <h1 class="text-2xl font-bold text-gray-800">Inquiries & Leads</h1>
                 <p class="text-sm text-gray-500">Leads from Website & Calculator</p>
             </div>
-            
+
             <div class="mt-4 md:mt-0 w-full md:w-1/3 relative">
-                <input v-model="search" type="text" placeholder="Search leads..." 
+                <input v-model="search" type="text" placeholder="Search leads..."
                     class="w-full border-gray-300 rounded-lg pl-10 py-2 focus:ring-blue-500 focus:border-blue-500">
                 <span class="absolute left-3 top-2.5 text-gray-400">🔍</span>
             </div>
@@ -76,10 +83,15 @@ const formatDate = (dateString) => {
                 <tbody class="divide-y divide-gray-100">
                     <tr v-for="lead in inquiries.data" :key="lead.id" class="hover:bg-blue-50 transition group">
                         <td class="p-4 text-sm text-gray-500 font-medium">{{ formatDate(lead.created_at) }}</td>
-                        
+
                         <td class="p-4">
                             <div class="font-bold text-gray-900">{{ lead.name }}</div>
                             <div class="text-xs text-gray-500">{{ lead.phone }}</div>
+                            <div v-if="lead.email" class="text-xs text-gray-400">{{ lead.email }}</div>
+                            <div v-if="lead.pincode" class="text-xs text-gray-400">📍 {{ lead.pincode }}</div>
+                            <div v-if="lead.property_type" class="text-xs text-gray-400">🏠 {{ lead.property_type }}</div>
+                            <div v-if="lead.visit_date" class="text-xs text-blue-600">📅 Visit: {{ formatDate(lead.visit_date) }}</div>
+                            <div v-if="lead.whatsapp_enabled" class="text-xs text-green-600">✓ WhatsApp Enabled</div>
                         </td>
 
                         <td class="p-4">
@@ -96,8 +108,8 @@ const formatDate = (dateString) => {
                         </td>
 
                         <td class="p-4 text-right">
-                            <button v-if="lead.status !== 'VISIT_BOOKED'" 
-                                @click="bookVisit(lead.id)" 
+                            <button v-if="lead.status !== 'VISIT_BOOKED'"
+                                @click="bookVisit(lead.id)"
                                 class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-700 shadow-sm">
                                 Book Visit ➜
                             </button>

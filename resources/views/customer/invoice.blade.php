@@ -7,6 +7,28 @@
     @php
     use Illuminate\Support\Facades\Storage;
     $branding = \App\Models\Setting::getSettings();
+
+    // Get logo for PDF (DomPDF works best with base64 encoded images)
+    $logoDataUri = null;
+    $logoUrl = null;
+    if (!empty($branding->logo_path)) {
+        // Try to get absolute file path
+        $logoPath = storage_path('app/public/' . $branding->logo_path);
+        if (!file_exists($logoPath)) {
+            $logoPath = public_path('storage/' . $branding->logo_path);
+        }
+
+        // If file exists, encode as base64 for PDF
+        if (file_exists($logoPath)) {
+            $imageData = file_get_contents($logoPath);
+            $imageInfo = getimagesize($logoPath);
+            $mimeType = $imageInfo['mime'] ?? 'image/png';
+            $logoDataUri = 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+        }
+
+        // Also get URL for web view
+        $logoUrl = Storage::url($branding->logo_path);
+    }
     @endphp
     <style>
         * {
@@ -16,15 +38,15 @@
         }
         body {
             font-family: Arial, sans-serif;
-            font-size: 12px;
-            line-height: 1.4;
+            font-size: 10px;
+            line-height: 1.3;
             color: #000;
             background: #fff;
         }
         .invoice-container {
-            max-width: 800px;
+            max-width: 100%;
             margin: 0 auto;
-            padding: 20px;
+            padding: 15px;
         }
         .invoice-header {
             display: flex;
@@ -99,12 +121,15 @@
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 0;
+            table-layout: fixed;
+            font-size: 9px;
         }
         .invoice-table th,
         .invoice-table td {
             border: 1px solid #000;
-            padding: 8px;
-            font-size: 11px;
+            padding: 4px 3px;
+            font-size: 9px;
+            word-wrap: break-word;
         }
         .invoice-table th {
             background: #f5f5f5;
@@ -191,21 +216,70 @@
             }
             .invoice-container {
                 margin: 0;
-                padding: 10px;
+                padding: 5px;
+            }
+            .download-button {
+                display: none !important;
+                visibility: hidden !important;
+            }
+            .invoice-table {
+                font-size: 8px;
+            }
+            .invoice-table th,
+            .invoice-table td {
+                padding: 3px 2px;
+                font-size: 8px;
             }
             @page {
-                margin: 0.5cm;
+                margin: 0.3cm;
+                size: A4 landscape;
             }
+        }
+        /* Download button - icon style, above invoice header */
+        .download-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: #2563eb;
+            color: white;
+            border-radius: 50%;
+            text-decoration: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: all 0.2s;
+        }
+        .download-button:hover {
+            background: #1d4ed8;
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .download-button svg {
+            width: 20px;
+            height: 20px;
         }
     </style>
 </head>
 <body>
     <div class="invoice-container">
+        <!-- Download Button - Icon style, above invoice header -->
+        <div style="text-align: right; margin-bottom: 15px;">
+            <a href="{{ route('customer.project.invoice.download', $project->id) }}" class="download-button" title="Download PDF">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+            </a>
+        </div>
+
         <!-- Header Section -->
         <div class="invoice-header">
             <div class="company-left">
-                @if(!empty($branding->logo_path))
-                    <img src="{{ Storage::url($branding->logo_path) }}" alt="Logo" class="company-logo">
+                @if(!empty($logoDataUri))
+                    {{-- Use base64 encoded image (works for both PDF and web) --}}
+                    <img src="{{ $logoDataUri }}" alt="Logo" class="company-logo">
+                @elseif(!empty($logoUrl))
+                    {{-- Fallback to URL if base64 not available --}}
+                    <img src="{{ $logoUrl }}" alt="Logo" class="company-logo">
                 @endif
                 <div class="company-name">{{ $branding->company_name }}</div>
                 <div class="company-details">
@@ -251,17 +325,17 @@
         <table class="invoice-table">
             <thead>
                 <tr>
-                    <th class="text-center" style="width: 40px;">Sr No</th>
-                    <th>Description</th>
-                    <th class="text-center" style="width: 70px;">HSN/SAC</th>
-                    <th class="text-right" style="width: 50px;">Qty</th>
-                    <th class="text-right" style="width: 80px;">Rate (₹)</th>
-                    <th class="text-right" style="width: 90px;">Taxable Value (₹)</th>
-                    <th class="text-center" style="width: 50px;">CGST %</th>
-                    <th class="text-right" style="width: 80px;">CGST (₹)</th>
-                    <th class="text-center" style="width: 50px;">SGST %</th>
-                    <th class="text-right" style="width: 80px;">SGST (₹)</th>
-                    <th class="text-right" style="width: 90px;">Line Total (₹)</th>
+                    <th class="text-center" style="width: 3%;">Sr</th>
+                    <th style="width: 25%;">Description</th>
+                    <th class="text-center" style="width: 6%;">HSN</th>
+                    <th class="text-right" style="width: 5%;">Qty</th>
+                    <th class="text-right" style="width: 7%;">Rate</th>
+                    <th class="text-right" style="width: 8%;">Taxable</th>
+                    <th class="text-center" style="width: 4%;">CGST%</th>
+                    <th class="text-right" style="width: 7%;">CGST</th>
+                    <th class="text-center" style="width: 4%;">SGST%</th>
+                    <th class="text-right" style="width: 7%;">SGST</th>
+                    <th class="text-right" style="width: 8%;">Total</th>
                 </tr>
             </thead>
             <tbody>

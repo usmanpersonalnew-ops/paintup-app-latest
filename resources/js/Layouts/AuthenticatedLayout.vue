@@ -5,8 +5,12 @@ import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 
+const page = usePage();
+const branding = page.props.branding || {};
+const companyName = branding.company_name || 'PaintUp';
+const logoUrl = branding.logo_url;
 const showingNavigationDropdown = ref(false);
 </script>
 
@@ -22,8 +26,15 @@ const showingNavigationDropdown = ref(false);
                         <div class="flex">
                             <!-- Logo -->
                             <div class="flex shrink-0 items-center">
-                                <Link :href="route('dashboard')">
+                                <Link :href="route('dashboard')" class="flex items-center">
+                                    <img
+                                        v-if="logoUrl"
+                                        :src="logoUrl"
+                                        :alt="companyName"
+                                        class="h-9 w-auto"
+                                    />
                                     <ApplicationLogo
+                                        v-else
                                         class="block h-9 w-auto fill-current text-gray-800"
                                     />
                                 </Link>

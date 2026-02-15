@@ -3,11 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tax Invoice - <?php echo e($invoice_number); ?></title>
-    <?php
+    <title>Tax Invoice - {{ $invoice_number }}</title>
+    @php
     use Illuminate\Support\Facades\Storage;
     $branding = \App\Models\Setting::getSettings();
-    ?>
+
+    // Get logo for PDF (DomPDF works best with base64 encoded images)
+    $logoDataUri = null;
+    $logoUrl = null;
+    if (!empty($branding->logo_path)) {
+        // Try to get absolute file path
+        $logoPath = storage_path('app/public/' . $branding->logo_path);
+        if (!file_exists($logoPath)) {
+            $logoPath = public_path('storage/' . $branding->logo_path);
+        }
+
+        // If file exists, encode as base64 for PDF
+        if (file_exists($logoPath)) {
+            $imageData = file_get_contents($logoPath);
+            $imageInfo = getimagesize($logoPath);
+            $mimeType = $imageInfo['mime'] ?? 'image/png';
+            $logoDataUri = 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+        }
+
+        // Also get URL for web view
+        $logoUrl = Storage::url($branding->logo_path);
+    }
+    @endphp
     <style>
         * {
             margin: 0;
@@ -16,15 +38,15 @@
         }
         body {
             font-family: Arial, sans-serif;
-            font-size: 12px;
-            line-height: 1.4;
+            font-size: 10px;
+            line-height: 1.3;
             color: #000;
             background: #fff;
         }
         .invoice-container {
-            max-width: 800px;
+            max-width: 100%;
             margin: 0 auto;
-            padding: 20px;
+            padding: 15px;
         }
         .invoice-header {
             display: flex;
@@ -99,12 +121,15 @@
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 0;
+            table-layout: fixed;
+            font-size: 9px;
         }
         .invoice-table th,
         .invoice-table td {
             border: 1px solid #000;
-            padding: 8px;
-            font-size: 11px;
+            padding: 4px 3px;
+            font-size: 9px;
+            word-wrap: break-word;
         }
         .invoice-table th {
             background: #f5f5f5;
@@ -191,43 +216,58 @@
             }
             .invoice-container {
                 margin: 0;
-                padding: 10px;
+                padding: 5px;
+            }
+            /* Download button removed from PDF version */
+            .invoice-table {
+                font-size: 8px;
+            }
+            .invoice-table th,
+            .invoice-table td {
+                padding: 3px 2px;
+                font-size: 8px;
             }
             @page {
-                margin: 0.5cm;
+                margin: 0.3cm;
+                size: A4 landscape;
             }
         }
+        /* Download button removed from PDF version */
     </style>
 </head>
 <body>
+    <!-- Download button removed - this is PDF-only view -->
     <div class="invoice-container">
         <!-- Header Section -->
         <div class="invoice-header">
             <div class="company-left">
-                <?php if(!empty($branding->logo_path)): ?>
-                    <img src="<?php echo e(Storage::url($branding->logo_path)); ?>" alt="Logo" class="company-logo">
-                <?php endif; ?>
-                <div class="company-name"><?php echo e($branding->company_name); ?></div>
+                @if(!empty($logoDataUri))
+                    {{-- Use base64 encoded image (works for both PDF and web) --}}
+                    <img src="{{ $logoDataUri }}" alt="Logo" class="company-logo">
+                @elseif(!empty($logoUrl))
+                    {{-- Fallback to URL if base64 not available --}}
+                    <img src="{{ $logoUrl }}" alt="Logo" class="company-logo">
+                @endif
+                <div class="company-name">{{ $branding->company_name }}</div>
                 <div class="company-details">
-                    <?php echo e($branding->address ?? ''); ?><br>
-                    <?php if(!empty($branding->gst_number)): ?>
-                        GSTIN: <?php echo e($branding->gst_number); ?><br>
-                    <?php endif; ?>
-                    <?php if(!empty($branding->support_email)): ?>
-                        Email: <?php echo e($branding->support_email); ?><br>
-                    <?php endif; ?>
-                    <?php if(!empty($branding->support_whatsapp)): ?>
-                        Phone: <?php echo e($branding->support_whatsapp); ?>
-
-                    <?php endif; ?>
+                    {{ $branding->address ?? '' }}<br>
+                    @if(!empty($branding->gst_number))
+                        GSTIN: {{ $branding->gst_number }}<br>
+                    @endif
+                    @if(!empty($branding->support_email))
+                        Email: {{ $branding->support_email }}<br>
+                    @endif
+                    @if(!empty($branding->support_whatsapp))
+                        Phone: {{ $branding->support_whatsapp }}
+                    @endif
                 </div>
             </div>
             <div class="invoice-right">
                 <div class="invoice-title">TAX INVOICE</div>
                 <div class="invoice-meta-info">
-                    <p><strong>Invoice No:</strong> <?php echo e($invoice_number); ?></p>
-                    <p><strong>Invoice Date:</strong> <?php echo e($invoice_date); ?></p>
-                    <p><strong>Place of Supply:</strong> <?php echo e($project->location ?? 'Mumbai, Maharashtra'); ?></p>
+                    <p><strong>Invoice No:</strong> {{ $invoice_number }}</p>
+                    <p><strong>Invoice Date:</strong> {{ $invoice_date }}</p>
+                    <p><strong>Place of Supply:</strong> {{ $project->location ?? 'Mumbai, Maharashtra' }}</p>
                     <p><strong>State Code:</strong> 27 (Maharashtra)</p>
                 </div>
             </div>
@@ -237,14 +277,13 @@
         <div class="bill-to-section">
             <div class="section-header">Bill To</div>
             <div class="bill-to-box">
-                <div class="name"><?php echo e($project->client_name); ?></div>
+                <div class="name">{{ $project->client_name }}</div>
                 <div class="details">
-                    <?php echo e($project->location); ?><br>
-                    Phone: <?php echo e($project->phone); ?><br>
-                    <?php if(!empty($project->gstin)): ?>
-                        GSTIN: <?php echo e($project->gstin); ?>
-
-                    <?php endif; ?>
+                    {{ $project->location }}<br>
+                    Phone: {{ $project->phone }}<br>
+                    @if(!empty($project->gstin))
+                        GSTIN: {{ $project->gstin }}
+                    @endif
                 </div>
             </div>
         </div>
@@ -253,25 +292,25 @@
         <table class="invoice-table">
             <thead>
                 <tr>
-                    <th class="text-center" style="width: 40px;">Sr No</th>
-                    <th>Description</th>
-                    <th class="text-center" style="width: 70px;">HSN/SAC</th>
-                    <th class="text-right" style="width: 50px;">Qty</th>
-                    <th class="text-right" style="width: 80px;">Rate (₹)</th>
-                    <th class="text-right" style="width: 90px;">Taxable Value (₹)</th>
-                    <th class="text-center" style="width: 50px;">CGST %</th>
-                    <th class="text-right" style="width: 80px;">CGST (₹)</th>
-                    <th class="text-center" style="width: 50px;">SGST %</th>
-                    <th class="text-right" style="width: 80px;">SGST (₹)</th>
-                    <th class="text-right" style="width: 90px;">Line Total (₹)</th>
+                    <th class="text-center" style="width: 3%;">Sr</th>
+                    <th style="width: 25%;">Description</th>
+                    <th class="text-center" style="width: 6%;">HSN</th>
+                    <th class="text-right" style="width: 5%;">Qty</th>
+                    <th class="text-right" style="width: 7%;">Rate</th>
+                    <th class="text-right" style="width: 8%;">Taxable</th>
+                    <th class="text-center" style="width: 4%;">CGST%</th>
+                    <th class="text-right" style="width: 7%;">CGST</th>
+                    <th class="text-center" style="width: 4%;">SGST%</th>
+                    <th class="text-right" style="width: 7%;">SGST</th>
+                    <th class="text-right" style="width: 8%;">Total</th>
                 </tr>
             </thead>
             <tbody>
                 <?php $srNo = 1; ?>
-                <?php if(!empty($room_breakdown)): ?>
-                    <?php $__currentLoopData = $room_breakdown; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $room): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                        <?php if(!empty($room['items'])): ?>
-                            <?php $__currentLoopData = $room['items']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $item): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                @if(!empty($room_breakdown))
+                    @foreach($room_breakdown as $room)
+                        @if(!empty($room['items']))
+                            @foreach($room['items'] as $item)
                                 <?php
                                 $itemTotal = $item['amount'];
                                 $cgst = round($itemTotal * 0.09, 2);
@@ -279,22 +318,22 @@
                                 $lineTotal = $itemTotal + $cgst + $sgst;
                                 ?>
                                 <tr>
-                                    <td class="text-center"><?php echo e($srNo++); ?></td>
-                                    <td><?php echo e($item['surface']); ?> - <?php echo e($item['product']); ?> (<?php echo e($item['system']); ?>)</td>
+                                    <td class="text-center">{{ $srNo++ }}</td>
+                                    <td>{{ $item['surface'] }} - {{ $item['product'] }} ({{ $item['system'] }})</td>
                                     <td class="text-center">9954</td>
-                                    <td class="text-right"><?php echo e(number_format($item['qty'], 2)); ?></td>
-                                    <td class="text-right"><?php echo e(number_format($item['rate'], 2)); ?></td>
-                                    <td class="text-right"><?php echo e(number_format($itemTotal, 2)); ?></td>
+                                    <td class="text-right">{{ number_format($item['qty'], 2) }}</td>
+                                    <td class="text-right">{{ number_format($item['rate'], 2) }}</td>
+                                    <td class="text-right">{{ number_format($itemTotal, 2) }}</td>
                                     <td class="text-center">9%</td>
-                                    <td class="text-right"><?php echo e(number_format($cgst, 2)); ?></td>
+                                    <td class="text-right">{{ number_format($cgst, 2) }}</td>
                                     <td class="text-center">9%</td>
-                                    <td class="text-right"><?php echo e(number_format($sgst, 2)); ?></td>
-                                    <td class="text-right"><?php echo e(number_format($lineTotal, 2)); ?></td>
+                                    <td class="text-right">{{ number_format($sgst, 2) }}</td>
+                                    <td class="text-right">{{ number_format($lineTotal, 2) }}</td>
                                 </tr>
-                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                        <?php endif; ?>
-                        <?php if(!empty($room['services'])): ?>
-                            <?php $__currentLoopData = $room['services']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $service): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            @endforeach
+                        @endif
+                        @if(!empty($room['services']))
+                            @foreach($room['services'] as $service)
                                 <?php
                                 $serviceTotal = $service['amount'];
                                 $cgst = round($serviceTotal * 0.09, 2);
@@ -302,36 +341,36 @@
                                 $lineTotal = $serviceTotal + $cgst + $sgst;
                                 ?>
                                 <tr>
-                                    <td class="text-center"><?php echo e($srNo++); ?></td>
-                                    <td><?php echo e($service['name']); ?></td>
+                                    <td class="text-center">{{ $srNo++ }}</td>
+                                    <td>{{ $service['name'] }}</td>
                                     <td class="text-center">9954</td>
-                                    <td class="text-right"><?php echo e(number_format($service['quantity'], 2)); ?></td>
-                                    <td class="text-right"><?php echo e(number_format($service['rate'], 2)); ?></td>
-                                    <td class="text-right"><?php echo e(number_format($serviceTotal, 2)); ?></td>
+                                    <td class="text-right">{{ number_format($service['quantity'], 2) }}</td>
+                                    <td class="text-right">{{ number_format($service['rate'], 2) }}</td>
+                                    <td class="text-right">{{ number_format($serviceTotal, 2) }}</td>
                                     <td class="text-center">9%</td>
-                                    <td class="text-right"><?php echo e(number_format($cgst, 2)); ?></td>
+                                    <td class="text-right">{{ number_format($cgst, 2) }}</td>
                                     <td class="text-center">9%</td>
-                                    <td class="text-right"><?php echo e(number_format($sgst, 2)); ?></td>
-                                    <td class="text-right"><?php echo e(number_format($lineTotal, 2)); ?></td>
+                                    <td class="text-right">{{ number_format($sgst, 2) }}</td>
+                                    <td class="text-right">{{ number_format($lineTotal, 2) }}</td>
                                 </tr>
-                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                        <?php endif; ?>
-                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                <?php else: ?>
+                            @endforeach
+                        @endif
+                    @endforeach
+                @else
                     <tr>
                         <td class="text-center">1</td>
                         <td>Painting & Allied Services</td>
                         <td class="text-center">9954</td>
                         <td class="text-right">1</td>
-                        <td class="text-right"><?php echo e(number_format($totals['base_total'], 2)); ?></td>
-                        <td class="text-right"><?php echo e(number_format($totals['base_total'], 2)); ?></td>
+                        <td class="text-right">{{ number_format($totals['base_total'], 2) }}</td>
+                        <td class="text-right">{{ number_format($totals['base_total'], 2) }}</td>
                         <td class="text-center">9%</td>
-                        <td class="text-right"><?php echo e(number_format($gst_breakdown['cgst_amount'] ?? 0, 2)); ?></td>
+                        <td class="text-right">{{ number_format($gst_breakdown['cgst_amount'] ?? 0, 2) }}</td>
                         <td class="text-center">9%</td>
-                        <td class="text-right"><?php echo e(number_format($gst_breakdown['sgst_amount'] ?? 0, 2)); ?></td>
-                        <td class="text-right"><?php echo e(number_format($totals['grand_total'], 2)); ?></td>
+                        <td class="text-right">{{ number_format($gst_breakdown['sgst_amount'] ?? 0, 2) }}</td>
+                        <td class="text-right">{{ number_format($totals['grand_total'], 2) }}</td>
                     </tr>
-                <?php endif; ?>
+                @endif
             </tbody>
         </table>
 
@@ -340,25 +379,24 @@
             <table class="summary-table">
                 <tr>
                     <td>Total Taxable Value</td>
-                    <td class="text-right">₹ <?php echo e(number_format($totals['base_total'], 2)); ?></td>
+                    <td class="text-right">₹ {{ number_format($totals['base_total'], 2) }}</td>
                 </tr>
                 <tr>
                     <td>CGST @ 9%</td>
-                    <td class="text-right">₹ <?php echo e(number_format($gst_breakdown['cgst_amount'] ?? ($totals['total_gst'] / 2), 2)); ?></td>
+                    <td class="text-right">₹ {{ number_format($gst_breakdown['cgst_amount'] ?? ($totals['total_gst'] / 2), 2) }}</td>
                 </tr>
                 <tr>
                     <td>SGST @ 9%</td>
-                    <td class="text-right">₹ <?php echo e(number_format($gst_breakdown['sgst_amount'] ?? ($totals['total_gst'] / 2), 2)); ?></td>
+                    <td class="text-right">₹ {{ number_format($gst_breakdown['sgst_amount'] ?? ($totals['total_gst'] / 2), 2) }}</td>
                 </tr>
                 <tr class="total-row">
                     <td>Grand Total</td>
-                    <td class="text-right">₹ <?php echo e(number_format($totals['grand_total'], 2)); ?></td>
+                    <td class="text-right">₹ {{ number_format($totals['grand_total'], 2) }}</td>
                 </tr>
             </table>
 
             <div class="amount-in-words">
-                Amount in Words: <?php echo e($amount_in_words ?? 'Rupees Zero Only'); ?>
-
+                Amount in Words: {{ $amount_in_words ?? 'Rupees Zero Only' }}
             </div>
         </div>
 
@@ -367,19 +405,18 @@
             <div class="bank-details">
                 <h4>Bank Details:</h4>
                 <p>
-                    <?php if(!empty($bank_details['bank_name'])): ?>
-                        Bank Name: <?php echo e($bank_details['bank_name']); ?><br>
-                    <?php endif; ?>
-                    <?php if(!empty($bank_details['account_number'])): ?>
-                        Account Number: <?php echo e($bank_details['account_number']); ?><br>
-                    <?php endif; ?>
-                    <?php if(!empty($bank_details['ifsc_code'])): ?>
-                        IFSC Code: <?php echo e($bank_details['ifsc_code']); ?><br>
-                    <?php endif; ?>
-                    <?php if(!empty($bank_details['branch'])): ?>
-                        Branch: <?php echo e($bank_details['branch']); ?>
-
-                    <?php endif; ?>
+                    @if(!empty($bank_details['bank_name']))
+                        Bank Name: {{ $bank_details['bank_name'] }}<br>
+                    @endif
+                    @if(!empty($bank_details['account_number']))
+                        Account Number: {{ $bank_details['account_number'] }}<br>
+                    @endif
+                    @if(!empty($bank_details['ifsc_code']))
+                        IFSC Code: {{ $bank_details['ifsc_code'] }}<br>
+                    @endif
+                    @if(!empty($bank_details['branch']))
+                        Branch: {{ $bank_details['branch'] }}
+                    @endif
                 </p>
             </div>
 
@@ -389,7 +426,7 @@
 
             <div class="signatory-section">
                 <div class="signatory-box">
-                    <div class="for-text">For <?php echo e($branding->company_name); ?></div>
+                    <div class="for-text">For {{ $branding->company_name }}</div>
                     <div class="signatory-line">
                         <br>
                         Authorized Signatory
@@ -400,4 +437,3 @@
     </div>
 </body>
 </html>
-<?php /**PATH C:\laragon\www\paintup\resources\views/customer/invoice.blade.php ENDPATH**/ ?>

@@ -5,7 +5,7 @@ import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 
 const props = defineProps({
     settings: {
@@ -25,7 +25,43 @@ const props = defineProps({
     },
 });
 
-const logoPreview = ref(props.settings.logo_path ? `/storage/${props.settings.logo_path}` : null);
+// Initialize logo preview - check both logo_url and generate from logo_path if needed
+const getLogoUrl = () => {
+    if (props.settings?.logo_url) {
+        return props.settings.logo_url;
+    }
+    // Fallback: generate URL from logo_path if logo_url not provided
+    if (props.settings?.logo_path) {
+        return `/storage/${props.settings.logo_path}`;
+    }
+    return null;
+};
+
+const logoPreview = ref(getLogoUrl());
+
+// Debug: Log settings on mount
+console.log('Settings on mount:', props.settings);
+console.log('Logo URL:', props.settings?.logo_url);
+console.log('Logo Path:', props.settings?.logo_path);
+console.log('Logo Preview:', logoPreview.value);
+
+// Watch for changes to settings prop (e.g., after form submission)
+watch(() => props.settings, (newSettings) => {
+    const newLogoUrl = newSettings?.logo_url || (newSettings?.logo_path ? `/storage/${newSettings.logo_path}` : null);
+    console.log('Settings changed, new logo URL:', newLogoUrl);
+
+    // Only update if:
+    // 1. New logo URL exists
+    // 2. Current preview is not a blob URL (file selection preview)
+    if (newLogoUrl && !logoPreview.value?.startsWith('blob:')) {
+        logoPreview.value = newLogoUrl;
+        console.log('Updated logo preview to:', logoPreview.value);
+    } else if (newLogoUrl && !logoPreview.value) {
+        // If no preview exists, set it
+        logoPreview.value = newLogoUrl;
+        console.log('Set initial logo preview to:', logoPreview.value);
+    }
+}, { immediate: true, deep: true });
 
 const form = useForm({
     company_name: props.settings.company_name,
@@ -68,7 +104,7 @@ const submit = () => {
                 <!-- Company Information -->
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
                     <h2 class="text-lg font-semibold text-gray-900 border-b pb-2">Company Information</h2>
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <InputLabel for="company_name" value="Company Name" />
@@ -123,13 +159,13 @@ const submit = () => {
                 <!-- Logo Upload -->
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
                     <h2 class="text-lg font-semibold text-gray-900 border-b pb-2">Logo</h2>
-                    
+
                     <div class="flex items-center gap-6">
                         <div class="w-32 h-32 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden">
-                            <img 
-                                v-if="logoPreview" 
-                                :src="logoPreview" 
-                                alt="Logo preview" 
+                            <img
+                                v-if="logoPreview"
+                                :src="logoPreview"
+                                alt="Logo preview"
                                 class="w-full h-full object-contain"
                             />
                             <span v-else class="text-gray-400 text-sm">No logo</span>
@@ -159,7 +195,7 @@ const submit = () => {
                 <!-- Colors -->
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
                     <h2 class="text-lg font-semibold text-gray-900 border-b pb-2">Brand Colors</h2>
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <InputLabel for="primary_color" value="Primary Color" />
@@ -204,7 +240,7 @@ const submit = () => {
                 <!-- Contact Information -->
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
                     <h2 class="text-lg font-semibold text-gray-900 border-b pb-2">Contact Information</h2>
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <InputLabel for="support_whatsapp" value="Support WhatsApp" />
@@ -236,7 +272,7 @@ const submit = () => {
                 <!-- Footer -->
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
                     <h2 class="text-lg font-semibold text-gray-900 border-b pb-2">Footer Settings</h2>
-                    
+
                     <div>
                         <InputLabel for="footer_text" value="Footer Text" />
                         <TextInput

@@ -13,6 +13,7 @@ const props = defineProps({
 
 const form = useForm({});
 const processingCashConfirm = ref(false);
+const sendingWhatsApp = ref(false);
 
 // Format currency
 const formatCurrency = (value) => {
@@ -71,9 +72,9 @@ const canCollectFinalPayment = () => isMidPaymentPaid() && !isFinalPaymentPaid()
 // Confirm cash payment
 const confirmCashPayment = (milestone) => {
     if (!confirm(`Confirm ${milestone} cash payment received from customer?`)) return;
-    
+
     processingCashConfirm.value = true;
-    
+
     form.post(route('admin.projects.confirm-cash', props.project.id), {
         data: { milestone },
         onSuccess: () => {
@@ -89,11 +90,11 @@ const confirmCashPayment = (milestone) => {
 const collectPayment = (type) => {
     const milestone = type === 'mid' ? 'mid' : 'final';
     if (!confirm(`Confirm ${milestone} payment collected?`)) return;
-    
+
     processingCashConfirm.value = true;
-    
+
     const routeName = type === 'mid' ? 'admin.projects.collect-mid' : 'admin.projects.collect-final';
-    
+
     form.post(route(routeName, props.project.id), {
         onSuccess: () => {
             window.location.reload();
@@ -122,14 +123,72 @@ const getStatusLabel = (status) => {
     };
     return labels[status] || status;
 };
+
+// Send WhatsApp message
+const sendWhatsAppMessage = () => {
+    if (!confirm(`Send WhatsApp message to ${props.project.client_name} (${props.project.phone}) about home visit schedule?`)) {
+        return;
+    }
+
+    sendingWhatsApp.value = true;
+
+    fetch(route('admin.projects.send-whatsapp', props.project.id), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ ' + data.message);
+        } else {
+            alert('❌ ' + (data.message || 'Failed to send WhatsApp message'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('❌ Error sending WhatsApp message');
+    })
+    .finally(() => {
+        sendingWhatsApp.value = false;
+    });
+};
 </script>
 
 <template>
     <div class="p-6">
         <div class="mb-6">
             <Link :href="route('admin.projects.index')" class="text-blue-600 text-sm mb-2 block">← Back to Projects</Link>
-            <h1 class="text-2xl font-bold text-gray-800">{{ project.client_name }}</h1>
-            <p class="text-gray-600">📍 {{ project.location }} | 📞 {{ project.phone }}</p>
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">{{ project.client_name }}</h1>
+                    <p class="text-gray-600">📍 {{ project.location }} | 📞 {{ project.phone }}</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button
+                        @click="sendWhatsAppMessage"
+                        :disabled="sendingWhatsApp"
+                        class="bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-green-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <svg v-if="!sendingWhatsApp" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        <span v-if="sendingWhatsApp" class="animate-spin">⏳</span>
+                        {{ sendingWhatsApp ? 'Sending...' : 'Send WhatsApp Message' }}
+                    </button>
+                    <Link
+                        :href="route('admin.projects.quote', project.id)"
+                        class="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        View Quote
+                    </Link>
+                </div>
+            </div>
         </div>
 
         <!-- Payment Summary Card -->
@@ -179,28 +238,28 @@ const getStatusLabel = (status) => {
                 <!-- Total Breakdown -->
                 <div class="border-t pt-4">
                     <h3 class="text-lg font-medium text-gray-800 mb-3">Price Breakdown</h3>
-                    
+
                     <!-- Subtotal (Before GST) -->
                     <div class="flex justify-between items-center mb-2">
                         <span class="text-sm text-gray-600">Subtotal (Before GST)</span>
                         <span class="text-sm font-medium text-gray-700">{{ formatCurrency(project.base_total) }}</span>
                     </div>
-                    
+
                     <!-- GST -->
                     <div class="flex justify-between items-center mb-2">
                         <span class="text-sm text-gray-600">GST ({{ project.gst_rate }}%)</span>
                         <span class="text-sm font-medium text-gray-700">{{ formatCurrency(toNumber(project.base_total) * (toNumber(project.gst_rate) / 100)) }}</span>
                     </div>
-                    
+
                     <!-- Discount Applied -->
                     <div v-if="project.discount_amount > 0" class="flex justify-between items-center mb-2">
                         <span class="text-sm text-gray-600">Discount ({{ project.coupon_code || 'Manual' }})</span>
                         <span class="text-sm font-medium text-green-600">-{{ formatCurrency(project.discount_amount) }}</span>
                     </div>
-                    
+
                     <!-- Divider -->
                     <div class="border-t border-gray-200 my-3"></div>
-                    
+
                     <!-- Total Project Value -->
                     <div class="flex justify-between items-center">
                         <span class="text-lg font-bold text-gray-800">Total Project Value</span>
@@ -211,7 +270,7 @@ const getStatusLabel = (status) => {
                 <!-- Cash Confirmation Actions -->
                 <div v-if="canConfirmCash()" class="mt-4 bg-orange-50 border border-orange-200 rounded-lg p-4">
                     <p class="font-medium text-orange-800 mb-2">💰 Cash Payment Pending Confirmation</p>
-                    <button 
+                    <button
                         @click="confirmCashPayment('booking')"
                         :disabled="processingCashConfirm"
                         class="w-full h-12 bg-orange-600 text-white rounded-lg font-bold hover:bg-orange-700 disabled:opacity-50"
@@ -223,7 +282,7 @@ const getStatusLabel = (status) => {
                 <!-- Mid Payment Collection -->
                 <div v-if="canCollectMidPayment()" class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <p class="font-medium text-blue-800 mb-2">💰 Collect Mid Payment</p>
-                    <button 
+                    <button
                         @click="collectPayment('mid')"
                         :disabled="processingCashConfirm"
                         class="w-full h-12 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50"
@@ -235,7 +294,7 @@ const getStatusLabel = (status) => {
                 <!-- Final Payment Collection -->
                 <div v-if="canCollectFinalPayment()" class="mt-4 bg-purple-50 border border-purple-200 rounded-lg p-4">
                     <p class="font-medium text-purple-800 mb-2">💰 Collect Final Payment</p>
-                    <button 
+                    <button
                         @click="collectPayment('final')"
                         :disabled="processingCashConfirm"
                         class="w-full h-12 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700 disabled:opacity-50"

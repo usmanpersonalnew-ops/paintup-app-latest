@@ -7,14 +7,37 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    supervisors: {
+        type: Array,
+        default: () => [],
+    },
 });
+
+// Parse home_visit_supervisors if it's a JSON string
+const getHomeVisitSupervisors = () => {
+    if (!props.project.home_visit_supervisors) return [];
+    if (typeof props.project.home_visit_supervisors === 'string') {
+        try {
+            return JSON.parse(props.project.home_visit_supervisors);
+        } catch (e) {
+            return [];
+        }
+    }
+    return props.project.home_visit_supervisors;
+};
 
 const form = useForm({
     client_name: props.project.client_name || '',
     phone: props.project.phone || '',
     location: props.project.location || '',
     status: props.project.status || 'NEW',
+    supervisor_id: props.project.supervisor_id || null,
+    home_visit_date: props.project.home_visit_date || '',
+    home_visit_time: props.project.home_visit_time || '',
+    home_visit_supervisors: getHomeVisitSupervisors(),
 });
+
+const selectedHomeVisitSupervisors = ref(getHomeVisitSupervisors());
 
 const processing = ref({});
 
@@ -37,13 +60,14 @@ const formatDate = (date) => {
 };
 
 const submit = () => {
+    form.home_visit_supervisors = selectedHomeVisitSupervisors.value;
     form.put(route('admin.projects.update', props.project.id));
 };
 
 // Manual payment confirmation functions
 const markBookingPaid = async () => {
     if (!confirm('Manually mark booking as PAID?')) return;
-    
+
     processing.value['booking'] = true;
     try {
         await axios.post(`/admin/projects/${props.project.id}/mark-booking-paid`, {});
@@ -57,7 +81,7 @@ const markBookingPaid = async () => {
 
 const markMidPaid = async () => {
     if (!confirm('Manually mark mid payment as PAID?')) return;
-    
+
     processing.value['mid'] = true;
     try {
         await axios.post(`/admin/projects/${props.project.id}/mark-mid-paid`, {});
@@ -71,7 +95,7 @@ const markMidPaid = async () => {
 
 const markFinalPaid = async () => {
     if (!confirm('Manually mark final payment as PAID?')) return;
-    
+
     processing.value['final'] = true;
     try {
         await axios.post(`/admin/projects/${props.project.id}/mark-final-paid`, {});
@@ -85,7 +109,7 @@ const markFinalPaid = async () => {
 
 const confirmCashPayment = async (milestone) => {
     if (!confirm(`Confirm ${milestone} cash payment received?`)) return;
-    
+
     processing.value[milestone] = true;
     try {
         await axios.post(`/admin/projects/${props.project.id}/confirm-cash`, { milestone });
@@ -145,7 +169,7 @@ const getWorkStatusColor = (status) => {
 
 const updateWorkStatus = async (newStatus) => {
     if (!confirm(`Change work status to "${newStatus}"?`)) return;
-    
+
     processing.value['work_status'] = true;
     try {
         await axios.post(`/admin/projects/${props.project.id}/work-status`, {
@@ -173,9 +197,20 @@ const updateWorkStatus = async (newStatus) => {
 
         <div class="mb-8 flex items-center justify-between">
             <h1 class="text-2xl font-bold text-gray-800">Project Details</h1>
-            <span :class="['px-4 py-1.5 rounded-full text-sm font-medium', getStatusColor(project.status)]">
-                {{ project.status }}
-            </span>
+            <div class="flex items-center gap-3">
+                <Link 
+                    :href="route('admin.projects.quote', project.id)" 
+                    class="bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-green-700 flex items-center gap-2"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    View Quote
+                </Link>
+                <span :class="['px-4 py-1.5 rounded-full text-sm font-medium', getStatusColor(project.status)]">
+                    {{ project.status }}
+                </span>
+            </div>
         </div>
 
         <!-- Payment Information Section -->
@@ -190,7 +225,7 @@ const updateWorkStatus = async (newStatus) => {
                         <p class="text-sm text-gray-500">Total Quote Amount</p>
                         <p class="text-xl font-bold text-gray-900">{{ formatCurrency(project.total_amount || 0) }}</p>
                     </div>
-                    
+
                     <!-- Payment Method -->
                     <div>
                         <p class="text-sm text-gray-500">Payment Method</p>
@@ -198,7 +233,7 @@ const updateWorkStatus = async (newStatus) => {
                             {{ project.payment_method || 'Not Selected' }}
                         </p>
                     </div>
-                    
+
                     <!-- Booking Status -->
                     <div>
                         <p class="text-sm text-gray-500">Booking (40%)</p>
@@ -207,7 +242,7 @@ const updateWorkStatus = async (newStatus) => {
                             {{ project.booking_status || 'PENDING' }}
                         </span>
                     </div>
-                    
+
                     <!-- Mid Status -->
                     <div>
                         <p class="text-sm text-gray-500">Mid Payment (40%)</p>
@@ -216,7 +251,7 @@ const updateWorkStatus = async (newStatus) => {
                             {{ project.mid_status || 'LOCKED' }}
                         </span>
                     </div>
-                    
+
                     <!-- Final Status -->
                     <div>
                         <p class="text-sm text-gray-500">Final Payment (20%)</p>
@@ -226,7 +261,7 @@ const updateWorkStatus = async (newStatus) => {
                         </span>
                     </div>
                 </div>
-                
+
                 <!-- Payment Timestamps -->
                 <div class="mt-6 pt-6 border-t border-gray-200">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 text-sm">
@@ -244,12 +279,12 @@ const updateWorkStatus = async (newStatus) => {
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Cash Confirmation Info -->
                 <div v-if="project.cash_confirmed_at" class="mt-6 pt-6 border-t border-gray-200">
                     <p class="text-sm text-green-600 font-medium">✓ Cash confirmed by supervisor on {{ formatDate(project.cash_confirmed_at) }}</p>
                 </div>
-                
+
                 <!-- Admin Manual Payment Actions -->
                 <div class="mt-6 pt-6 border-t border-gray-200">
                     <p class="text-sm font-semibold text-gray-700 mb-3">Admin Manual Actions:</p>
@@ -314,7 +349,7 @@ const updateWorkStatus = async (newStatus) => {
                         <p class="font-medium text-gray-900">{{ formatDate(project.work_completed_at) }}</p>
                     </div>
                 </div>
-                
+
                 <!-- Work Status Timeline -->
                 <div class="mb-6">
                     <p class="text-sm font-semibold text-gray-700 mb-4">Progress Timeline</p>
@@ -333,7 +368,7 @@ const updateWorkStatus = async (newStatus) => {
                         </template>
                     </div>
                 </div>
-                
+
                 <!-- Admin Work Status Controls -->
                 <div class="pt-6 border-t border-gray-200">
                     <p class="text-sm font-semibold text-gray-700 mb-3">Change Work Status (Admin Override):</p>
@@ -407,6 +442,63 @@ const updateWorkStatus = async (newStatus) => {
                             </select>
                         </div>
 
+                        <!-- Assign Supervisor -->
+                        <div>
+                            <label class="mb-2 block text-sm font-medium text-gray-700">Assign Supervisor</label>
+                            <select
+                                v-model="form.supervisor_id"
+                                class="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                                <option :value="null">Select Supervisor...</option>
+                                <option v-for="supervisor in supervisors" :key="supervisor.id" :value="supervisor.id">
+                                    {{ supervisor.name }} ({{ supervisor.email }})
+                                </option>
+                            </select>
+                            <p v-if="form.errors.supervisor_id" class="mt-1 text-sm text-red-600">{{ form.errors.supervisor_id }}</p>
+                        </div>
+
+                        <!-- Home Visits Section -->
+                        <div class="border-t pt-4 mt-4">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Home Visits</h3>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="mb-2 block text-sm font-medium text-gray-700">Visit Date</label>
+                                    <input
+                                        v-model="form.home_visit_date"
+                                        type="date"
+                                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    />
+                                    <p v-if="form.errors.home_visit_date" class="mt-1 text-sm text-red-600">{{ form.errors.home_visit_date }}</p>
+                                </div>
+
+                                <div>
+                                    <label class="mb-2 block text-sm font-medium text-gray-700">Visit Time</label>
+                                    <input
+                                        v-model="form.home_visit_time"
+                                        type="time"
+                                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    />
+                                    <p v-if="form.errors.home_visit_time" class="mt-1 text-sm text-red-600">{{ form.errors.home_visit_time }}</p>
+                                </div>
+                            </div>
+
+                            <div class="mt-4">
+                                <label class="mb-2 block text-sm font-medium text-gray-700">Select Supervisors for Visit</label>
+                                <select
+                                    v-model="selectedHomeVisitSupervisors"
+                                    multiple
+                                    class="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[100px]"
+                                >
+                                    <option v-for="supervisor in supervisors" :key="supervisor.id" :value="supervisor.id">
+                                        {{ supervisor.name }} ({{ supervisor.email }})
+                                    </option>
+                                </select>
+                                <p class="mt-1 text-xs text-gray-500">Hold Ctrl/Cmd to select multiple supervisors</p>
+                                <p v-if="form.errors.home_visit_supervisors" class="mt-1 text-sm text-red-600">{{ form.errors.home_visit_supervisors }}</p>
+                            </div>
+                        </div>
+
                         <div class="flex gap-4 pt-4">
                             <button
                                 type="submit"
@@ -424,7 +516,7 @@ const updateWorkStatus = async (newStatus) => {
             <div class="overflow-hidden rounded-lg bg-white shadow">
                 <div class="px-4 lg:px-6 py-6">
                     <h2 class="text-lg font-semibold text-gray-800 mb-6">Quick Actions</h2>
-                    
+
                     <div class="space-y-4">
                         <Link
                             :href="route('supervisor.projects.create', { project_id: project.id })"

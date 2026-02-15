@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -23,8 +24,24 @@ class SettingsController extends Controller
             ]
         );
 
+        // Generate logo URL if logo exists - use full URL like middleware does
+        $settingsArray = $settings->toArray();
+        if ($settings->logo_path) {
+            // Generate full URL using request's scheme and host
+            $settingsArray['logo_url'] = request()->getSchemeAndHttpHost() . Storage::url($settings->logo_path);
+        } else {
+            $settingsArray['logo_url'] = null;
+        }
+
+        // Debug: Log what we're passing
+        Log::info('Settings Controller - Passing to Inertia:', [
+            'logo_path' => $settingsArray['logo_path'] ?? 'null',
+            'logo_url' => $settingsArray['logo_url'] ?? 'null',
+            'all_settings' => $settingsArray
+        ]);
+
         return Inertia::render('Admin/Settings/Index', [
-            'settings' => $settings,
+            'settings' => $settingsArray,
         ]);
     }
 
@@ -55,23 +72,71 @@ class SettingsController extends Controller
 
         DB::beginTransaction();
         try {
-            // Handle logo upload
+            // Handle logo upload - only if a new file is uploaded
             if ($request->hasFile('logo_path')) {
                 // Delete old logo if exists
-                if ($settings->logo_path && Storage::exists('public/' . $settings->logo_path)) {
-                    Storage::delete('public/' . $settings->logo_path);
+                if ($settings->logo_path && Storage::disk('public')->exists($settings->logo_path)) {
+                    Storage::disk('public')->delete($settings->logo_path);
                 }
 
                 $logo = $request->file('logo_path');
                 $logoName = 'logo-' . time() . '.' . $logo->getClientOriginalExtension();
-                $logo->storeAs('public/settings', $logoName);
-                $validated['logo_path'] = 'settings/' . $logoName;
+
+                // Store the file using public disk
+                $path = $logo->storeAs('settings', $logoName, 'public');
+
+                // Verify file was stored
+                $fullPath = storage_path('app/public/' . $path);
+                if (!file_exists($fullPath)) {
+                    throw new \Exception('Failed to store logo file. Path: ' . $fullPath);
+                }
+
+                // Set proper permissions (readable by web server)
+                @chmod($fullPath, 0644);
+
+                $validated['logo_path'] = $path; // Use the path returned by storeAs
+
+                Log::info('Logo uploaded successfully:', [
+                    'path' => $path,
+                    'logo_path' => $validated['logo_path'],
+                    'full_path' => $fullPath,
+                    'exists' => file_exists($fullPath),
+                    'size' => file_exists($fullPath) ? filesize($fullPath) : 0,
+                    'permissions' => file_exists($fullPath) ? substr(sprintf('%o', fileperms($fullPath)), -4) : 'N/A'
+                ]);
+            } else {
+                // If no new logo uploaded, preserve the existing logo_path
+                // Remove logo_path from validated so it doesn't get overwritten
+                unset($validated['logo_path']);
+                Log::info('No new logo uploaded, preserving existing logo_path: ' . ($settings->logo_path ?? 'NULL'));
             }
 
             $settings->update($validated);
             DB::commit();
 
-            return redirect()->route('admin.settings')->with('success', 'Settings updated successfully');
+            // Refresh settings to get updated logo_path
+            $settings->refresh();
+
+            // Log the updated settings for debugging
+            Log::info('Settings updated:', [
+                'logo_path' => $settings->logo_path,
+                'all_data' => $settings->toArray()
+            ]);
+
+            // Generate logo URL for response - use full URL
+            $settingsArray = $settings->toArray();
+            if ($settings->logo_path) {
+                // Generate full URL using request's scheme and host
+                $settingsArray['logo_url'] = $request->getSchemeAndHttpHost() . Storage::url($settings->logo_path);
+            } else {
+                $settingsArray['logo_url'] = null;
+            }
+
+            // For Inertia, we need to redirect and pass data through Inertia's share
+            // Use Inertia redirect to pass the updated settings
+            return Inertia::render('Admin/Settings/Index', [
+                'settings' => $settingsArray,
+            ])->with('success', 'Settings updated successfully');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Failed to update settings: ' . $e->getMessage());

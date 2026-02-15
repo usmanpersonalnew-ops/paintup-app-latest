@@ -70,14 +70,14 @@ class PaymentGatewayService
     protected function createPhonePePayment(Project $project, string $paymentPurpose, float $amount): array
     {
         $config = config('paymentgateways.phonepe');
-        
+
         if (!$config['enabled']) {
             throw new \Exception('PhonePe payment gateway is not enabled');
         }
 
         $merchantTransactionId = 'PU-' . $project->id . '-' . strtoupper($paymentPurpose) . '-' . time();
         $merchantUserId = 'CUST-' . $project->customer_id ?? 'GUEST';
-        
+
         $payload = [
             'merchantId' => $config['merchant_id'],
             'merchantTransactionId' => $merchantTransactionId,
@@ -96,8 +96,8 @@ class PaymentGatewayService
         $hash = hash('sha256', $verifyString) . '###' . $config['salt_index'];
 
         $isSandbox = $config['environment'] === 'sandbox';
-        $baseUrl = $isSandbox 
-            ? 'https://api-preprod.phonepe.com/apis/pg/payment/v4/create' 
+        $baseUrl = $isSandbox
+            ? 'https://api-preprod.phonepe.com/apis/pg/payment/v4/create'
             : 'https://api.phonepe.com/apis/pg/payment/v4/create';
 
         try {
@@ -137,13 +137,13 @@ class PaymentGatewayService
     protected function verifyPhonePeCallback(array $data): bool
     {
         $config = config('paymentgateways.phonepe');
-        
+
         if (!isset($data['response'])) {
             return false;
         }
 
         $responseData = json_decode(base64_decode($data['response']), true);
-        
+
         return isset($responseData['success']) && $responseData['success'] === 'true';
     }
 
@@ -152,13 +152,13 @@ class PaymentGatewayService
     protected function createCCAvenuePayment(Project $project, string $paymentPurpose, float $amount): array
     {
         $config = config('paymentgateways.ccavenue');
-        
+
         if (!$config['enabled']) {
             throw new \Exception('CCAvenue payment gateway is not enabled');
         }
 
         $orderId = 'PU-' . $project->id . '-' . strtoupper($paymentPurpose) . '-' . time();
-        
+
         $params = [
             'merchant_id' => $config['merchant_id'],
             'order_id' => $orderId,
@@ -175,8 +175,8 @@ class PaymentGatewayService
         $encryptedParams = $this->encryptCCAvenueParams($params);
 
         $isSandbox = $config['environment'] === 'sandbox';
-        $baseUrl = $isSandbox 
-            ? 'https://test.ccavenue.com/apis/servlet/DoWebTrans' 
+        $baseUrl = $isSandbox
+            ? 'https://test.ccavenue.com/apis/servlet/DoWebTrans'
             : 'https://secure.ccavenue.com/apis/servlet/DoWebTrans';
 
         return [
@@ -195,14 +195,14 @@ class PaymentGatewayService
     {
         $config = config('paymentgateways.ccavenue');
         $workingKey = $config['working_key'];
-        
+
         $plainText = http_build_query($params);
-        
+
         $encrypted = '';
         for ($i = 0; $i < strlen($plainText); $i++) {
             $encrypted .= chr(ord($plainText[$i]) ^ ord($workingKey[$i % strlen($workingKey)]));
         }
-        
+
         return bin2hex($encrypted);
     }
 
@@ -211,7 +211,7 @@ class PaymentGatewayService
         if (!isset($data['encResp'])) {
             return false;
         }
-        
+
         return true;
     }
 }

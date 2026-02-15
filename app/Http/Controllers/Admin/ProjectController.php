@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Project;
+use App\Services\Msg91WhatsappService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class ProjectController extends Controller
@@ -37,7 +39,14 @@ class ProjectController extends Controller
      */
     public function create()
     {
-        return Inertia::render('Admin/Projects/Create');
+        $supervisors = \App\Models\User::where('role', 'SUPERVISOR')
+            ->where('status', 'ACTIVE')
+            ->select('id', 'name', 'email')
+            ->get();
+
+        return Inertia::render('Admin/Projects/Create', [
+            'supervisors' => $supervisors,
+        ]);
     }
 
     /**
@@ -50,6 +59,11 @@ class ProjectController extends Controller
             'phone' => 'required|string|max:20',
             'location' => 'required|string|max:500',
             'total_amount' => 'nullable|numeric',
+            'supervisor_id' => 'nullable|integer|exists:users,id',
+            'home_visit_date' => 'nullable|date',
+            'home_visit_time' => 'nullable|string',
+            'home_visit_supervisors' => 'nullable|array',
+            'home_visit_supervisors.*' => 'integer|exists:users,id',
         ]);
 
         // Calculate pricing breakdown
@@ -81,6 +95,10 @@ class ProjectController extends Controller
             'booking_payment_status' => Project::PAYMENT_PENDING,
             'mid_payment_status' => Project::PAYMENT_PENDING,
             'final_payment_status' => Project::PAYMENT_PENDING,
+            'supervisor_id' => $validated['supervisor_id'] ?? null,
+            'home_visit_date' => $validated['home_visit_date'] ?? null,
+            'home_visit_time' => $validated['home_visit_time'] ?? null,
+            'home_visit_supervisors' => isset($validated['home_visit_supervisors']) ? json_encode($validated['home_visit_supervisors']) : null,
         ]);
 
         return redirect()->route('admin.projects.index')
@@ -115,9 +133,14 @@ class ProjectController extends Controller
     public function edit($id)
     {
         $project = Project::findOrFail($id);
+        $supervisors = \App\Models\User::where('role', 'SUPERVISOR')
+            ->where('status', 'ACTIVE')
+            ->select('id', 'name', 'email')
+            ->get();
 
         return Inertia::render('Admin/Projects/Edit', [
             'project' => $project,
+            'supervisors' => $supervisors,
         ]);
     }
 
@@ -134,6 +157,11 @@ class ProjectController extends Controller
             'location' => 'required|string|max:500',
             'total_amount' => 'nullable|numeric',
             'status' => 'nullable|string|in:DRAFT,AWAITING_CASH_CONFIRMATION,CONFIRMED,IN_PROGRESS,COMPLETED',
+            'supervisor_id' => 'nullable|integer|exists:users,id',
+            'home_visit_date' => 'nullable|date',
+            'home_visit_time' => 'nullable|string',
+            'home_visit_supervisors' => 'nullable|array',
+            'home_visit_supervisors.*' => 'integer|exists:users,id',
         ]);
 
         // Recalculate pricing breakdown if total changed
@@ -162,10 +190,90 @@ class ProjectController extends Controller
             'mid_payment_amount' => $milestones['mid_payment_amount'],
             'final_payment_amount' => $milestones['final_payment_amount'],
             'status' => $validated['status'] ?? $project->status,
+            'supervisor_id' => $validated['supervisor_id'] ?? $project->supervisor_id,
+            'home_visit_date' => $validated['home_visit_date'] ?? $project->home_visit_date,
+            'home_visit_time' => $validated['home_visit_time'] ?? $project->home_visit_time,
+            'home_visit_supervisors' => isset($validated['home_visit_supervisors']) ? json_encode($validated['home_visit_supervisors']) : $project->home_visit_supervisors,
         ]);
 
         return redirect()->route('admin.projects.index')
             ->with('success', 'Project updated successfully.');
+    }
+
+    /**
+     * View customer quote (same view as customer sees)
+     */
+    public function viewQuote($id)
+    {
+        // Find project - admin can view any project
+        $project = Project::where('id', $id)
+            ->with(['rooms.items.surface', 'rooms.items.product', 'rooms.items.system', 'rooms.services.masterService'])
+            ->firstOrFail();
+
+        // Calculate totals - sum pre-computed amounts only
+        $totalPaintAmount = 0;
+        $totalServiceAmount = 0;
+
+        foreach ($project->rooms as $room) {
+            $roomTotal = 0;
+            foreach ($room->items as $item) {
+                $itemAmount = $item->amount ?? 0;
+                $totalPaintAmount += $itemAmount;
+                $roomTotal += $itemAmount;
+            }
+            foreach ($room->services as $service) {
+                $serviceAmount = $service->amount ?? 0;
+                $totalServiceAmount += $serviceAmount;
+                $roomTotal += $serviceAmount;
+
+                // Ensure service name is populated
+                if (!$service->custom_name) {
+                    // Try to get from masterService relationship first
+                    if ($service->masterService) {
+                        $service->custom_name = $service->masterService->name;
+                    }
+                    // If relationship is null but master_service_id exists, load it
+                    elseif ($service->master_service_id) {
+                        $masterService = \App\Models\MasterService::find($service->master_service_id);
+                        if ($masterService) {
+                            $service->custom_name = $masterService->name;
+                        } else {
+                            $service->custom_name = 'Additional Service';
+                        }
+                    }
+                    else {
+                        $service->custom_name = 'Additional Service';
+                    }
+                }
+            }
+            $room->room_total = $roomTotal;
+        }
+
+        // Base total (without GST) - used for contract value and milestone calculations
+        // Apply discount if coupon is used
+        $discountAmount = $project->discount_amount ?? 0;
+        $baseTotal = $totalPaintAmount + $totalServiceAmount - $discountAmount;
+
+        // Milestone amounts (40-40-20) calculated from BASE TOTAL (GST excluded)
+        $bookingAmount = round($baseTotal * 0.40, 2);
+        $midPaymentAmount = round($baseTotal * 0.40, 2);
+        $finalPaymentAmount = round($baseTotal * 0.20, 2);
+
+        // Admin viewing - no customer login required
+        return Inertia::render('Customer/QuoteView', [
+            'customer' => null,
+            'project' => $project,
+            'totals' => [
+                'paint' => $totalPaintAmount,
+                'services' => $totalServiceAmount,
+                'base_total' => $baseTotal,
+                'booking_amount' => $bookingAmount,
+                'mid_payment_amount' => $midPaymentAmount,
+                'final_payment_amount' => $finalPaymentAmount,
+            ],
+            'isLoggedIn' => false, // Admin viewing, not customer
+            'isAdminView' => true, // Flag to show admin-specific UI
+        ]);
     }
 
     /**
@@ -176,15 +284,15 @@ class ProjectController extends Controller
         try {
             // Check if projects table exists first
             $tables = \DB::select("SELECT name FROM sqlite_master WHERE type='table' AND name='projects'");
-            
+
             if (empty($tables)) {
                 return redirect()->route('admin.projects.index')
                     ->with('error', 'Projects table not found.');
             }
-            
+
             // Delete using query builder with bindings (safer)
             $affected = \DB::delete('DELETE FROM projects WHERE id = ?', [$id]);
-            
+
             if ($affected > 0) {
                 return redirect()->route('admin.projects.index')
                     ->with('success', 'Project deleted successfully.');
@@ -199,13 +307,94 @@ class ProjectController extends Controller
                 $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
                 $stmt = $pdo->prepare("DELETE FROM projects WHERE id = ?");
                 $stmt->execute([$id]);
-                
+
                 return redirect()->route('admin.projects.index')
                     ->with('success', 'Project deleted successfully.');
             } catch (\Exception $e2) {
                 return redirect()->route('admin.projects.index')
                     ->with('error', 'Failed to delete project: ' . $e2->getMessage());
             }
+        }
+    }
+
+    /**
+     * Send WhatsApp message for home visit scheduled
+     */
+    public function sendWhatsAppMessage(Request $request, Project $project)
+    {
+        // Validate that project has required data
+        if (!$project->phone) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Project phone number is missing.'
+            ], 400);
+        }
+
+        // Format date and time
+        $visitDate = $project->home_visit_date
+            ? \Carbon\Carbon::parse($project->home_visit_date)->format('d M Y')
+            : 'Not scheduled';
+
+        $visitTime = $project->home_visit_time
+            ? \Carbon\Carbon::parse($project->home_visit_time)->format('h:i A')
+            : 'Not scheduled';
+
+        // Get supervisor names
+        $supervisorNames = 'Not assigned';
+        if ($project->home_visit_supervisors) {
+            $supervisorIds = json_decode($project->home_visit_supervisors, true);
+            if (is_array($supervisorIds) && !empty($supervisorIds)) {
+                $supervisors = \App\Models\User::whereIn('id', $supervisorIds)
+                    ->pluck('name')
+                    ->toArray();
+                $supervisorNames = implode(', ', $supervisors);
+            } elseif ($project->supervisor_id) {
+                $supervisor = \App\Models\User::find($project->supervisor_id);
+                $supervisorNames = $supervisor ? $supervisor->name : 'Not assigned';
+            }
+        } elseif ($project->supervisor_id) {
+            $supervisor = \App\Models\User::find($project->supervisor_id);
+            $supervisorNames = $supervisor ? $supervisor->name : 'Not assigned';
+        }
+
+        // Prepare template values
+        // body_1: Date
+        // body_2: Time
+        // body_3: Supervisor names
+        $value1 = $visitDate;
+        $value2 = $visitTime;
+        $value3 = $supervisorNames;
+
+        try {
+            $msg91Service = new Msg91WhatsappService();
+            $sent = $msg91Service->sendHomeVisitScheduled(
+                $project->phone,
+                $value1,
+                $value2,
+                $value3
+            );
+
+            if ($sent) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'WhatsApp message sent successfully to ' . $project->phone
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to send WhatsApp message. Please check logs.'
+                ], 500);
+            }
+        } catch (\Exception $e) {
+            Log::error('WhatsApp send error', [
+                'project_id' => $project->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error sending WhatsApp message: ' . $e->getMessage()
+            ], 500);
         }
     }
 }

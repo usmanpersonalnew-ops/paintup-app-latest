@@ -46,6 +46,9 @@ class Project extends Model
         'coupon_id',
         'coupon_code',
         'discount_amount',
+        'home_visit_date',
+        'home_visit_time',
+        'home_visit_supervisors',
     ];
 
     protected $casts = [
@@ -163,18 +166,18 @@ class Project extends Model
     {
         $baseTotal = $this->base_total ?? $this->total_amount ?? 0;
         $gstRate = $this->getGstRate();
-        
+
         $percentage = match($milestoneType) {
             'booking' => 0.40,
             'mid' => 0.40,
             'final' => 0.20,
             default => 0,
         };
-        
+
         $baseAmount = round($baseTotal * $percentage, 2);
         $gstAmount = round($baseAmount * ($gstRate / 100), 2);
         $totalAmount = $baseAmount + $gstAmount;
-        
+
         return [
             'base_amount' => $baseAmount,
             'gst_rate' => $gstRate,
@@ -201,11 +204,11 @@ class Project extends Model
         if (!$this->isFullyPaid()) {
             return false;
         }
-        
+
         $totalBasePaid = $this->milestonePayments()
             ->where('payment_status', MilestonePayment::STATUS_PAID)
             ->sum('base_amount');
-        
+
         return abs($totalBasePaid - ($this->base_total ?? $this->total_amount ?? 0)) < 0.01;
     }
 

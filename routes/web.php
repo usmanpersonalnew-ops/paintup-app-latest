@@ -76,7 +76,7 @@ Route::prefix('admin')->middleware(['auth:web', 'verified'])->group(function () 
 
     // User CRUD
     Route::resource('users', UserController::class)->names('admin.users');
-    
+
     // User Custom Actions
     Route::post('/users/{user}/activate', [UserController::class, 'activate'])->name('admin.users.activate');
     Route::post('/users/{user}/deactivate', [UserController::class, 'deactivate'])->name('admin.users.deactivate');
@@ -91,6 +91,12 @@ Route::prefix('admin')->middleware(['auth:web', 'verified'])->group(function () 
 
     // Projects (Home Visits)
     Route::resource('projects', ProjectController::class)->names('admin.projects');
+
+    // View customer quote (same view as customer sees)
+    Route::get('/projects/{project}/quote', [ProjectController::class, 'viewQuote'])->name('admin.projects.quote');
+
+    // Send WhatsApp message for home visit
+    Route::post('/projects/{project}/send-whatsapp', [ProjectController::class, 'sendWhatsAppMessage'])->name('admin.projects.send-whatsapp');
 
     // Payment Routes - Admin can manually confirm/change payments
     Route::post('/projects/{project}/confirm-cash', [AdminPaymentController::class, 'confirmCashPayment'])->name('admin.projects.confirm-cash');
@@ -140,37 +146,37 @@ Route::prefix('admin')->middleware(['auth:web', 'verified'])->group(function () 
 Route::middleware(['auth:web', 'verified'])->prefix('supervisor')->name('supervisor.')->group(function () {
     // Dashboard
     Route::get('/dashboard', fn() => Inertia::render('Supervisor/Dashboard'))->name('dashboard');
-    
+
     // Projects
     Route::resource('projects', SupervisorProjectController::class);
-    
+
     // Screen A: Create Zone (Room)
     Route::get('/projects/{project}/zones/create', [ProjectRoomController::class, 'create'])->name('zones.create');
     Route::post('/projects/{project}/zones', [ProjectRoomController::class, 'store'])->name('zones.store');
-    
+
     // Screen B: Zone Dashboard (Hub)
     Route::get('/zones/{projectRoom}', [ZoneDashboardController::class, 'index'])->name('zones.show');
     Route::put('/zones/{projectRoom}', [ProjectRoomController::class, 'update'])->name('zones.update');
-    
+
     // Screen C: Paint Items
     Route::get('/zones/{projectRoom}/paint', [QuoteItemController::class, 'create'])->name('zones.paint.create');
     Route::post('/zones/{projectRoom}/paint', [QuoteItemController::class, 'store'])->name('zones.paint.store');
     Route::get('/zones/{projectRoom}/paint/{item}/edit', [QuoteItemController::class, 'edit'])->name('zones.paint.edit');
     Route::put('/zones/{projectRoom}/paint/{item}', [QuoteItemController::class, 'update'])->name('zones.paint.update');
     Route::get('/products/{product}/systems', [QuoteItemController::class, 'getSystems'])->name('products.systems');
-    
+
     // Screen D: Service/Repair
     Route::get('/zones/{projectRoom}/service', [ServiceController::class, 'create'])->name('zones.service.create');
     Route::post('/zones/{projectRoom}/service', [ServiceController::class, 'store'])->name('zones.service.store');
     Route::get('/zones/{projectRoom}/service/{quoteService}/edit', [ServiceController::class, 'edit'])->name('zones.service.edit');
     Route::put('/zones/{projectRoom}/service/{quoteService}', [ServiceController::class, 'update'])->name('zones.service.update');
-    
+
     // Service store with FormData (for Zones/Show.vue modal)
     Route::post('/zones/{projectRoom}/services', [ServiceController::class, 'storeFormData'])->name('zones.services.store');
-    
+
     // Duplicate Zone
     Route::post('/zones/{projectRoom}/duplicate', [ProjectRoomController::class, 'duplicate'])->name('zones.duplicate');
-    
+
     // Screen E: Summary
     Route::get('/projects/{project}/summary', [\App\Http\Controllers\Supervisor\SummaryController::class, 'show'])->name('summary');
     Route::post('/projects/{project}/finalize', [\App\Http\Controllers\Supervisor\SummaryController::class, 'finalize'])->name('finalize');
@@ -180,7 +186,7 @@ Route::middleware(['auth:web', 'verified'])->prefix('supervisor')->name('supervi
     // Coupon Routes
     Route::post('/projects/{project}/apply-coupon', [\App\Http\Controllers\Supervisor\CouponApplyController::class, 'apply'])->name('projects.apply-coupon');
     Route::post('/projects/{project}/remove-coupon', [\App\Http\Controllers\Supervisor\CouponApplyController::class, 'remove'])->name('projects.remove-coupon');
-    
+
     // Payment Routes - Supervisor can confirm cash payments
     Route::post('/projects/{project}/confirm-cash-booking', [SupervisorPaymentController::class, 'confirmCashBooking'])->name('projects.confirm-cash-booking');
     Route::post('/projects/{project}/confirm-cash', [SupervisorPaymentController::class, 'confirmCashPayment'])->name('projects.confirm-cash');
@@ -242,41 +248,42 @@ Route::middleware('web')->group(function () {
 // Customer Protected Routes (all require login)
 Route::middleware(['auth:customer'])->prefix('customer')->name('customer.')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\Customer\CustomerDashboardController::class, 'index'])->name('dashboard');
-    
+
     // Debug route
     Route::get('/debug-dashboard', [\App\Http\Controllers\Customer\DebugDashboardController::class, 'index'])->name('debug-dashboard');
-    
+
     // Quote View (Authenticated - no token needed, uses session)
     Route::get('/quote/{project}', [\App\Http\Controllers\Customer\CustomerQuoteController::class, 'show'])->name('quote.show');
-    
+
     // Progress Photos (Authenticated - no token needed)
     Route::get('/project/{project}/photos', [\App\Http\Controllers\Customer\ProjectPhotoController::class, 'show'])->name('project.photos');
-    
+
     // Payment Endpoints (Authenticated only - NoBroker style)
     Route::get('/project/{project}/milestone/{milestone}', [\App\Http\Controllers\Customer\CustomerPaymentController::class, 'getMilestoneDetails'])->name('project.milestone.details');
     Route::post('/project/{project}/booking/online', [\App\Http\Controllers\Customer\CustomerPaymentController::class, 'onlineBooking'])->name('project.booking.online');
     Route::post('/project/{project}/booking/cash', [\App\Http\Controllers\Customer\CustomerPaymentController::class, 'cashBooking'])->name('project.booking.cash');
     Route::post('/project/{project}/mid-payment', [\App\Http\Controllers\Customer\CustomerPaymentController::class, 'payMidPayment'])->name('project.pay-mid');
     Route::post('/project/{project}/final-payment', [\App\Http\Controllers\Customer\CustomerPaymentController::class, 'payFinalPayment'])->name('project.pay-final');
-    
+
     // Dedicated Payment Page (Checkout Style)
     Route::get('/payment/{project}/{milestone}', [\App\Http\Controllers\Customer\CustomerPaymentController::class, 'showPaymentPage'])->name('payment.page');
-    
+
     // Billing Details
     Route::post('/project/{project}/billing-details', [\App\Http\Controllers\Customer\CustomerPaymentController::class, 'saveBillingDetails'])->name('project.billing-details');
 
     // Invoice (View-only - after full payment)
-    Route::get('/project/{project}/invoice', [\App\Http\Controllers\Customer\CustomerInvoiceController::class, 'view'])->name('customer.project.invoice');
+    Route::get('/project/{project}/invoice', [\App\Http\Controllers\Customer\CustomerInvoiceController::class, 'view'])->name('project.invoice');
+    Route::get('/project/{project}/invoice/download', [\App\Http\Controllers\Customer\CustomerInvoiceController::class, 'download'])->name('project.invoice.download');
 
     // Warranty (View-only - after full payment and work completion)
     Route::get('/project/{project}/warranty', [\App\Http\Controllers\Customer\CustomerWarrantyController::class, 'view'])->name('customer.project.warranty');
 
     // Payment History
     Route::get('/payment-history', [\App\Http\Controllers\Customer\CustomerDashboardController::class, 'paymentHistory'])->name('payment.history');
-    
+
     // Work Progress
     Route::get('/work-progress', [\App\Http\Controllers\Customer\CustomerDashboardController::class, 'workProgress'])->name('work.progress');
-    
+
     // Profile
     Route::get('/profile', [\App\Http\Controllers\Customer\CustomerProfileController::class, 'index'])->name('profile');
     Route::patch('/profile', [\App\Http\Controllers\Customer\CustomerProfileController::class, 'update'])->name('profile.update');

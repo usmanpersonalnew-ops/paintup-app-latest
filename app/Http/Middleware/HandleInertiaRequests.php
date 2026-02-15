@@ -31,13 +31,20 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $branding = Setting::toSettingsArray();
+
+        // Generate full URL for logo using request's scheme and host
+        if ($branding['logo_path']) {
+            $branding['logo_url'] = $request->getSchemeAndHttpHost() . \Illuminate\Support\Facades\Storage::url($branding['logo_path']);
+        }
+
         return [
             ...parent::share($request),
             'auth' => [
                 'user' => $request->user(),
                 'customer' => Auth::guard('customer')->check() ? Auth::guard('customer')->user() : null,
             ],
-            'branding' => fn () => Setting::toSettingsArray(),
+            'branding' => $branding,
         ];
     }
 }

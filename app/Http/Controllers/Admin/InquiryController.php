@@ -16,7 +16,7 @@ class InquiryController extends Controller
      */
     public function index(): Response
     {
-        $inquiries = Inquiry::orderBy('created_at', 'desc')->get();
+        $inquiries = Inquiry::orderBy('created_at', 'desc')->paginate(20);
 
         return Inertia::render('Admin/Inquiries/Index', [
             'inquiries' => $inquiries,

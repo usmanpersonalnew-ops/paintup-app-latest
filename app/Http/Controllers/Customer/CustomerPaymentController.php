@@ -37,12 +37,12 @@ class CustomerPaymentController extends Controller
     public function getMilestoneDetails(Project $project, string $milestone)
     {
         $milestoneData = $project->calculateMilestoneWithGst($milestone);
-        
+
         // Check if milestone payment already exists
         $existingPayment = MilestonePayment::where('project_id', $project->id)
             ->where('milestone_name', $milestone)
             ->first();
-        
+
         if ($existingPayment) {
             return response()->json([
                 'success' => true,
@@ -57,7 +57,7 @@ class CustomerPaymentController extends Controller
                 ],
             ]);
         }
-        
+
         return response()->json([
             'success' => true,
             'milestone' => [
@@ -85,14 +85,29 @@ class CustomerPaymentController extends Controller
             ], 400);
         }
 
+        // Recalculate totals if base_total is missing or zero
+        if (empty($project->base_total) || $project->base_total == 0) {
+            $project->load(['rooms.items', 'rooms.services']);
+            $project->recalculateTotals();
+            $project->refresh();
+        }
+
         // Calculate pricing from BASE TOTAL only
         $baseTotal = $project->base_total ?? $project->total_amount ?? 0;
         $gstRate = $project->getGstRate();
-        
+
         // Calculate milestone amounts from base total
         $bookingBase = round($baseTotal * 0.40, 2);
         $bookingGst = round($bookingBase * ($gstRate / 100), 2);
         $bookingTotal = $bookingBase + $bookingGst;
+
+        // Validate that amount is greater than zero
+        if ($bookingTotal <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot process payment: Project total is zero. Please ensure the project has items or services added.',
+            ], 400);
+        }
 
         // Generate order ID for CCAvenue
         $orderId = 'PAINTUP-' . $project->id . '-BOOKING-' . time();
@@ -142,7 +157,7 @@ class CustomerPaymentController extends Controller
         // Calculate pricing from BASE TOTAL only
         $baseTotal = $project->base_total ?? $project->total_amount ?? 0;
         $gstRate = $project->getGstRate();
-        
+
         // Calculate milestone amounts from base total
         $bookingBase = round($baseTotal * 0.40, 2);
         $bookingGst = round($bookingBase * ($gstRate / 100), 2);
@@ -198,9 +213,16 @@ class CustomerPaymentController extends Controller
             'payment_method' => 'required|in:ONLINE,CASH',
         ]);
 
+        // Recalculate totals if base_total is missing or zero
+        if (empty($project->base_total) || $project->base_total == 0) {
+            $project->load(['rooms.items', 'rooms.services']);
+            $project->recalculateTotals();
+            $project->refresh();
+        }
+
         $baseTotal = $project->base_total ?? $project->total_amount ?? 0;
         $gstRate = $project->getGstRate();
-        
+
         $midBase = round($baseTotal * 0.40, 2);
         $midGst = round($midBase * ($gstRate / 100), 2);
         $midTotal = $midBase + $midGst;
@@ -211,6 +233,14 @@ class CustomerPaymentController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Online payment is currently disabled. Please contact support.',
+                ], 400);
+            }
+
+            // Validate that amount is greater than zero
+            if ($midTotal <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot process payment: Project total is zero. Please ensure the project has items or services added.',
                 ], 400);
             }
 
@@ -285,9 +315,16 @@ class CustomerPaymentController extends Controller
             'payment_method' => 'required|in:ONLINE,CASH',
         ]);
 
+        // Recalculate totals if base_total is missing or zero
+        if (empty($project->base_total) || $project->base_total == 0) {
+            $project->load(['rooms.items', 'rooms.services']);
+            $project->recalculateTotals();
+            $project->refresh();
+        }
+
         $baseTotal = $project->base_total ?? $project->total_amount ?? 0;
         $gstRate = $project->getGstRate();
-        
+
         $finalBase = round($baseTotal * 0.20, 2);
         $finalGst = round($finalBase * ($gstRate / 100), 2);
         $finalTotal = $finalBase + $finalGst;
@@ -298,6 +335,14 @@ class CustomerPaymentController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Online payment is currently disabled. Please contact support.',
+                ], 400);
+            }
+
+            // Validate that amount is greater than zero
+            if ($finalTotal <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot process payment: Project total is zero. Please ensure the project has items or services added.',
                 ], 400);
             }
 

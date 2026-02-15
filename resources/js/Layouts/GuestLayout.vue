@@ -3,8 +3,9 @@ import { Link, usePage } from '@inertiajs/vue3';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 
 const page = usePage();
-const settings = page.props.settings || {};
+const settings = page.props.settings || page.props.branding || {};
 const companyName = settings.company_name || 'PaintUp';
+const logoUrl = settings.logo_url;
 const primaryColor = settings.primary_color || '#2563eb';
 const secondaryColor = settings.secondary_color || '#1e293b';
 </script>
@@ -31,8 +32,8 @@ const secondaryColor = settings.secondary_color || '#1e293b';
                 <!-- Logo -->
                 <div class="mb-8">
                     <img 
-                        v-if="settings.logo_path" 
-                        :src="`/storage/${settings.logo_path}`" 
+                        v-if="logoUrl" 
+                        :src="logoUrl" 
                         :alt="companyName"
                         class="h-20 w-auto mx-auto"
                     />
@@ -88,8 +89,8 @@ const secondaryColor = settings.secondary_color || '#1e293b';
                 <!-- Mobile Logo -->
                 <div class="lg:hidden text-center mb-8">
                     <img 
-                        v-if="settings.logo_path" 
-                        :src="`/storage/${settings.logo_path}`" 
+                        v-if="logoUrl" 
+                        :src="logoUrl" 
                         :alt="companyName"
                         class="h-16 w-auto mx-auto mb-4"
                     />

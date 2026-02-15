@@ -6,7 +6,7 @@ import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 const page = usePage();
 const branding = page.props.branding || {};
 const companyName = branding.company_name || 'PaintUp';
-const logoPath = branding.logo_path;
+const logoUrl = branding.logo_url;
 const primaryColor = branding.primary_color || '#2563eb';
 const secondaryColor = branding.secondary_color || '#1e293b';
 const footerText = branding.footer_text;
@@ -33,7 +33,7 @@ const currentYear = new Date().getFullYear();
         ></div>
 
         <div class="flex h-screen overflow-hidden w-full">
-            <!-- Sidebar -->
+            <!-- Sidebar111 -->
             <aside
                 :class="[
                     'text-white transition-all duration-300 ease-in-out fixed lg:relative z-50 h-full',
@@ -45,9 +45,9 @@ const currentYear = new Date().getFullYear();
                 <!-- Logo -->
                 <div class="flex h-16 items-center justify-center border-b border-white/10">
                     <Link href="/admin/dashboard" class="flex items-center gap-2">
-                        <img 
-                            v-if="logoPath" 
-                            :src="`/storage/${logoPath}`" 
+                        <img
+                            v-if="logoUrl"
+                            :src="logoUrl"
                             :alt="companyName"
                             class="h-8 w-auto"
                         />
@@ -254,7 +254,7 @@ const currentYear = new Date().getFullYear();
                     <div class="p-6 lg:p-8">
                         <slot />
                     </div>
-                    
+
                     <!-- Footer -->
                     <footer class="bg-white border-t border-gray-200 py-4 px-6">
                         <p class="text-sm text-gray-500 text-center">

@@ -143,9 +143,19 @@ class Setting extends Model
     public static function toSettingsArray(): array
     {
         $settings = static::getSettings();
+        $logoUrl = null;
+
+        if ($settings->logo_path) {
+            // Generate full URL - use asset() for public storage or construct full URL
+            $storagePath = \Illuminate\Support\Facades\Storage::url($settings->logo_path);
+            // Remove leading slash if present and use asset() or url() helper
+            $logoUrl = asset(ltrim($storagePath, '/'));
+        }
+
         return [
             'company_name' => $settings->company_name,
-            'logo_path' => $settings->logo_path,
+            'logo_path' => $settings->logo_path, // Keep original path for database reference
+            'logo_url' => $logoUrl, // Full URL for frontend use
             'primary_color' => $settings->primary_color,
             'secondary_color' => $settings->secondary_color,
             'support_whatsapp' => $settings->support_whatsapp,

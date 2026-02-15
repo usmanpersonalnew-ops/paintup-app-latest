@@ -1,6 +1,17 @@
 <script setup>
 import { computed } from 'vue';
-import { router } from '@inertiajs/vue3';
+import { router, usePage } from '@inertiajs/vue3';
+import ApplicationLogo from '@/Components/ApplicationLogo.vue';
+
+const page = usePage();
+const branding = page.props.branding || {};
+const companyName = branding.company_name || 'PaintUp';
+const logoUrl = branding.logo_url;
+const primaryColor = branding.primary_color || '#2563eb';
+const supportEmail = branding.support_email;
+const supportWhatsapp = branding.support_whatsapp;
+const address = branding.address;
+const gstNumber = branding.gst_number;
 
 const props = defineProps({
     project: {
@@ -18,6 +29,10 @@ const props = defineProps({
     publicToken: {
         type: String,
         default: '',
+    },
+    isAdminView: {
+        type: Boolean,
+        default: false,
     },
 });
 
@@ -87,6 +102,9 @@ const getPaymentUrl = (milestone) => {
 
 // Get dashboard URL
 const getDashboardUrl = () => {
+    if (props.isAdminView) {
+        return route('admin.projects.index');
+    }
     return route('customer.dashboard');
 };
 
@@ -94,7 +112,7 @@ const getDashboardUrl = () => {
 const formatMeasurement = (item) => {
     const qty = Number(item.net_qty ?? item.gross_qty ?? item.qty ?? 0);
     const unit = item.unit_type || item.measurement_mode || '';
-    
+
     if (unit === 'AREA' || unit === 'MANUAL') {
         return `${formatNumber(qty, 0)} sqft`;
     } else if (unit === 'LUMPSUM') {
@@ -112,12 +130,12 @@ const getSystemDetails = (item) => {
     const system = item.system || {};
     const product = item.product || {};
     const surface = item.surface || {};
-    
+
     // Format: Surface Name + Product Name
     const surfaceName = surface.name || 'Surface';
     const productName = product.name || system.system_name || '';
     const displayName = productName ? `${surfaceName} + ${productName}` : surfaceName;
-    
+
     return {
         displayName: displayName,
         surfaceName: surfaceName,
@@ -133,11 +151,11 @@ const getSystemDetails = (item) => {
 // Get service details
 const getServiceDetails = (service) => {
     const details = [];
-    
+
     // Quantity
     const qty = Number(service.quantity || 0);
     const unit = service.unit_type || '';
-    
+
     if (qty > 0) {
         if (unit === 'AREA' || unit === 'MANUAL') {
             details.push(`${formatNumber(qty, 0)} sqft`);
@@ -151,7 +169,7 @@ const getServiceDetails = (service) => {
             details.push(`${formatNumber(qty, 0)} ${unit || 'units'}`);
         }
     }
-    
+
     // Rate - use proper unit label
     const rate = Number(service.rate || 0);
     if (rate > 0) {
@@ -163,14 +181,14 @@ const getServiceDetails = (service) => {
         } else if (unit === 'COUNT') {
             unitLabel = 'unit';
         }
-        
+
         if (unit === 'LUMPSUM') {
             details.push(`@ ₹${formatNumber(rate, 0)}`);
         } else {
             details.push(`@ ₹${formatNumber(rate, 0)}/${unitLabel}`);
         }
     }
-    
+
     return details.join(' ');
 };
 
@@ -198,41 +216,79 @@ const getMilestoneIcon = (milestone) => {
         <div class="max-w-4xl mx-auto" v-if="project">
             <!-- Back Link -->
             <div class="mb-4">
-                <a 
-                    v-if="isLoggedIn"
+                <a
+                    v-if="isLoggedIn || isAdminView"
                     :href="getDashboardUrl()"
                     class="inline-flex items-center text-blue-600 hover:text-blue-800"
                 >
                     <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                     </svg>
-                    Back to Dashboard
+                    {{ isAdminView ? 'Back to Projects' : 'Back to Dashboard' }}
                 </a>
             </div>
 
-            <!-- Header -->
-            <div class="bg-white rounded-lg shadow p-6 mb-6">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <h1 class="text-2xl font-bold text-gray-900">Quote Details</h1>
-                        <p class="text-gray-500 mt-1">Project #{{ project.id }}</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-sm text-gray-500">Quote Date</p>
-                        <p class="font-medium">{{ new Date().toLocaleDateString('en-IN') }}</p>
+            <!-- Company Header with Logo -->
+            <div class="bg-white rounded-lg shadow mb-6 overflow-hidden">
+                <!-- Header Section with Logo -->
+                <div class="p-6" :style="{ backgroundColor: primaryColor + '10', borderBottom: '2px solid ' + primaryColor }">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <!-- Logo -->
+                            <div class="flex-shrink-0">
+                                <img
+                                    v-if="logoUrl"
+                                    :src="logoUrl"
+                                    :alt="companyName"
+                                    class="h-16 w-auto object-contain"
+                                />
+                                <ApplicationLogo v-else class="h-16 w-auto fill-current" :style="{ color: primaryColor }" />
+                            </div>
+                            <!-- Company Name and Info -->
+                            <div>
+                                <h1 class="text-2xl font-bold" :style="{ color: primaryColor }">{{ companyName }}</h1>
+                                <p v-if="address" class="text-sm text-gray-600 mt-1">{{ address }}</p>
+                                <div v-if="supportEmail || supportWhatsapp" class="flex gap-4 mt-2 text-xs text-gray-600">
+                                    <span v-if="supportEmail">📧 {{ supportEmail }}</span>
+                                    <span v-if="supportWhatsapp">📱 {{ supportWhatsapp }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Quote Badge -->
+                        <div class="text-right">
+                            <div class="inline-block px-4 py-2 rounded-lg" :style="{ backgroundColor: primaryColor, color: 'white' }">
+                                <p class="text-sm font-medium">QUOTE</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
-                <!-- Client Info -->
-                <div class="mt-4 pt-4 border-t border-gray-100">
-                    <div class="grid grid-cols-2 gap-4">
+
+                <!-- Quote Details Section -->
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-900">Quote Details</h2>
+                            <p class="text-gray-500 mt-1">Project #{{ project.id }}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm text-gray-500">Quote Date</p>
+                            <p class="font-medium">{{ new Date(project.created_at || new Date()).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }) }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Client Info -->
+                    <div class="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
                         <div>
                             <p class="text-sm text-gray-500">Client</p>
-                            <p class="font-medium">{{ project.client_name || 'N/A' }}</p>
+                            <p class="font-medium text-gray-900">{{ project.client_name || 'N/A' }}</p>
                         </div>
                         <div>
                             <p class="text-sm text-gray-500">Location</p>
-                            <p class="font-medium">{{ project.location || 'N/A' }}</p>
+                            <p class="font-medium text-gray-900">{{ project.location || 'N/A' }}</p>
+                        </div>
+                        <div v-if="gstNumber">
+                            <p class="text-sm text-gray-500">GST Number</p>
+                            <p class="font-medium text-gray-900">{{ gstNumber }}</p>
                         </div>
                     </div>
                 </div>
@@ -251,7 +307,7 @@ const getMilestoneIcon = (milestone) => {
                         <p class="text-xl font-semibold text-gray-700">{{ project.rooms?.length || 0 }}</p>
                     </div>
                 </div>
-                
+
                 <!-- Coupon Applied -->
                 <div v-if="hasCoupon" class="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
                     <div class="flex justify-between items-center">
@@ -265,7 +321,7 @@ const getMilestoneIcon = (milestone) => {
                         <span class="text-green-600 font-medium">-{{ formatCurrency(discountAmount) }}</span>
                     </div>
                 </div>
-                
+
                 <!-- GST Notice -->
                 <div class="mt-4 p-3 bg-blue-50 rounded-lg">
                     <p class="text-sm text-blue-700">
@@ -279,7 +335,7 @@ const getMilestoneIcon = (milestone) => {
                 <div class="px-6 py-4 border-b border-gray-100">
                     <h2 class="text-lg font-semibold text-gray-800">📋 Itemized Breakdown</h2>
                 </div>
-                
+
                 <!-- Rooms -->
                 <div v-if="project.rooms?.length > 0">
                     <div v-for="(room, index) in project.rooms" :key="index" class="border-b border-gray-100 last:border-0">
@@ -288,7 +344,7 @@ const getMilestoneIcon = (milestone) => {
                                 <h3 class="font-medium text-gray-800">{{ room.name || `Room ${index + 1}` }}</h3>
                                 <span class="text-sm text-gray-500">{{ room.items?.length || 0 }} items</span>
                             </div>
-                            
+
                             <!-- Painting Items -->
                             <div v-if="room.items?.length > 0" class="ml-4 space-y-3">
                                 <div v-for="(item, itemIndex) in room.items" :key="itemIndex" class="bg-gray-50 rounded-lg p-3">
@@ -314,7 +370,7 @@ const getMilestoneIcon = (milestone) => {
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Services -->
                             <div v-if="room.services?.length > 0" class="mt-3 ml-4 space-y-3">
                                 <div v-for="(service, serviceIndex) in room.services" :key="serviceIndex" class="bg-orange-50 rounded-lg p-3">
@@ -330,7 +386,7 @@ const getMilestoneIcon = (milestone) => {
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Room Total -->
                             <div class="mt-3 pt-3 border-t border-gray-100 flex justify-between">
                                 <span class="font-medium text-gray-700">Room Total</span>
@@ -341,7 +397,7 @@ const getMilestoneIcon = (milestone) => {
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Empty State -->
                 <div v-else class="px-6 py-8 text-center text-gray-500">
                     No items added yet
@@ -353,7 +409,7 @@ const getMilestoneIcon = (milestone) => {
                 <div class="px-6 py-4 border-b border-gray-100">
                     <h2 class="text-lg font-semibold text-gray-800">💰 Payment Stages</h2>
                 </div>
-                
+
                 <div class="p-6">
                     <!-- Booking (40%) -->
                     <div class="flex items-center justify-between p-4 rounded-lg mb-3" :class="isBookingPaid ? 'bg-green-50 border border-green-200' : 'bg-gray-50'">
@@ -368,7 +424,7 @@ const getMilestoneIcon = (milestone) => {
                             {{ getMilestoneStatus('booking') }}
                         </span>
                     </div>
-                    
+
                     <!-- Mid (40%) -->
                     <div class="flex items-center justify-between p-4 rounded-lg mb-3" :class="isMidPaid ? 'bg-green-50 border border-green-200' : 'bg-gray-50'">
                         <div class="flex items-center">
@@ -382,7 +438,7 @@ const getMilestoneIcon = (milestone) => {
                             {{ getMilestoneStatus('mid') }}
                         </span>
                     </div>
-                    
+
                     <!-- Final (20%) -->
                     <div class="flex items-center justify-between p-4 rounded-lg" :class="isFinalPaid ? 'bg-green-50 border border-green-200' : 'bg-gray-50'">
                         <div class="flex items-center">
@@ -399,11 +455,11 @@ const getMilestoneIcon = (milestone) => {
                 </div>
             </div>
 
-            <!-- Payment CTA (only for logged in users) -->
-            <div v-if="isLoggedIn && !isFinalPaid" class="bg-white rounded-lg shadow p-6">
+            <!-- Payment CTA (only for logged in customers, not admin view) -->
+            <div v-if="isLoggedIn && !isAdminView && !isFinalPaid" class="bg-white rounded-lg shadow p-6">
                 <h2 class="text-lg font-semibold text-gray-800 mb-4">📝 Proceed to Payment</h2>
                 <p class="text-gray-600 mb-4">Click below to proceed with payment for your booking.</p>
-                
+
                 <div class="space-y-3">
                     <a
                         v-if="!isBookingPaid"
@@ -412,7 +468,7 @@ const getMilestoneIcon = (milestone) => {
                     >
                         Pay Booking (40%): {{ bookingTotal }}
                     </a>
-                    
+
                     <a
                         v-if="isBookingPaid && !isMidPaid"
                         :href="getPaymentUrl('mid')"
@@ -420,7 +476,7 @@ const getMilestoneIcon = (milestone) => {
                     >
                         Pay Mid (40%): {{ midTotal }}
                     </a>
-                    
+
                     <a
                         v-if="isMidPaid && !isFinalPaid"
                         :href="getPaymentUrl('final')"
@@ -428,7 +484,7 @@ const getMilestoneIcon = (milestone) => {
                     >
                         Pay Final (20%): {{ finalTotal }}
                     </a>
-                    
+
                     <div v-if="isFinalPaid" class="p-4 bg-green-50 rounded-lg text-center">
                         <p class="text-green-700 font-medium">✅ All payments completed!</p>
                     </div>

@@ -27,7 +27,7 @@ class Msg91WhatsappService
     {
         // Clean phone number - remove any non-numeric characters
         $phone = preg_replace('/[^0-9]/', '', $phone);
-        
+
         // Ensure phone has country code
         if (strlen($phone) === 10) {
             $phone = '91' . $phone;
@@ -99,7 +99,7 @@ class Msg91WhatsappService
     {
         // Clean phone number - remove any non-numeric characters
         $phone = preg_replace('/[^0-9]/', '', $phone);
-        
+
         // Ensure phone has country code
         if (strlen($phone) === 10) {
             $phone = '91' . $phone;
@@ -171,7 +171,7 @@ class Msg91WhatsappService
     {
         // Clean phone number - remove any non-numeric characters
         $phone = preg_replace('/[^0-9]/', '', $phone);
-        
+
         // Ensure phone has country code
         if (strlen($phone) === 10) {
             $phone = '91' . $phone;
@@ -227,6 +227,144 @@ class Msg91WhatsappService
         } catch (\Throwable $e) {
             Log::error('MSG91 QUOTE ERROR', ['message' => $e->getMessage()]);
             return true; // Return true to allow app to continue
+        }
+    }
+
+    /**
+     * Send home visit scheduled message using home_visit_scheduled template
+     */
+    public function sendHomeVisitScheduled(string $phone, string $value1, string $value2, string $value3): bool
+    {
+        // Clean phone number - remove any non-numeric characters
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+
+        // Ensure phone has country code
+        if (strlen($phone) === 10) {
+            $phone = '91' . $phone;
+        }
+
+        // Build payload as per MSG91 API format
+        $payload = [
+            'integrated_number' => $this->integratedNumber,
+            'content_type' => 'template',
+            'payload' => [
+                'messaging_product' => 'whatsapp',
+                'type' => 'template',
+                'template' => [
+                    'name' => 'home_visit_scheduled',
+                    'language' => [
+                        'code' => 'en',
+                        'policy' => 'deterministic'
+                    ],
+                    'namespace' => '66c315f0_de10_4a62_9a38_e17644d88cd2',
+                    'to_and_components' => [
+                        [
+                            'to' => [$phone],
+                            'components' => [
+                                'body_1' => [
+                                    'type' => 'text',
+                                    'value' => $value1
+                                ],
+                                'body_2' => [
+                                    'type' => 'text',
+                                    'value' => $value2
+                                ],
+                                'body_3' => [
+                                    'type' => 'text',
+                                    'value' => $value3
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ];
+
+        Log::info('MSG91 HOME VISIT SCHEDULED PAYLOAD', $payload);
+
+        try {
+            // Skip if no auth key configured (dev mode)
+            if (empty($this->authKey)) {
+                Log::warning('MSG91 AUTH KEY not configured - skipping home visit message');
+                return true;
+            }
+
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+                'authkey' => $this->authKey,
+            ])->post('https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/bulk/', $payload);
+
+            Log::info('MSG91 HOME VISIT RESPONSE', ['body' => $response->body()]);
+
+            return $response->successful();
+        } catch (\Throwable $e) {
+            Log::error('MSG91 HOME VISIT ERROR', ['message' => $e->getMessage()]);
+            return false;
+        }
+    }
+
+    /**
+     * Send service intro message using service_intro template
+     */
+    public function sendServiceIntro(string $phone, string $customerName): bool
+    {
+        // Clean phone number - remove any non-numeric characters
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+
+        // Ensure phone has country code
+        if (strlen($phone) === 10) {
+            $phone = '91' . $phone;
+        }
+
+        // Build payload as per MSG91 API format
+        $payload = [
+            'integrated_number' => $this->integratedNumber,
+            'content_type' => 'template',
+            'payload' => [
+                'messaging_product' => 'whatsapp',
+                'type' => 'template',
+                'template' => [
+                    'name' => 'service_intro',
+                    'language' => [
+                        'code' => 'en',
+                        'policy' => 'deterministic'
+                    ],
+                    'namespace' => '66c315f0_de10_4a62_9a38_e17644d88cd2',
+                    'to_and_components' => [
+                        [
+                            'to' => [$phone],
+                            'components' => [
+                                'body_1' => [
+                                    'type' => 'text',
+                                    'value' => $customerName
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ];
+
+        Log::info('MSG91 SERVICE INTRO PAYLOAD', $payload);
+
+        try {
+            // Skip if no auth key configured (dev mode)
+            if (empty($this->authKey)) {
+                Log::warning('MSG91 AUTH KEY not configured - skipping service intro message');
+                return true;
+            }
+
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+                'authkey' => $this->authKey,
+            ])->post('https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/bulk/', $payload);
+
+            Log::info('MSG91 SERVICE INTRO RESPONSE', ['body' => $response->body()]);
+
+            return $response->successful();
+        } catch (\Throwable $e) {
+            Log::error('MSG91 SERVICE INTRO ERROR', ['message' => $e->getMessage()]);
+            return false;
         }
     }
 }
