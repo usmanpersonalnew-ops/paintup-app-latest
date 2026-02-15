@@ -108,6 +108,8 @@ Route::prefix('admin')->middleware(['auth:web', 'verified'])->group(function () 
 
     // Payment History
     Route::get('/payment-history', [AdminPaymentController::class, 'paymentHistory'])->name('admin.payment.history');
+    Route::get('/projects/{project}/payment-history', [AdminPaymentController::class, 'projectPaymentHistory'])->name('admin.projects.payment-history');
+    Route::post('/projects/{project}/add-payment', [AdminPaymentController::class, 'addPayment'])->name('admin.projects.add-payment');
 
     // Work Status Routes - Admin has full control
     Route::post('/projects/{project}/work-status', [AdminProjectWorkController::class, 'updateStatus'])->name('admin.projects.work-status');
@@ -272,6 +274,9 @@ Route::middleware(['auth:customer'])->prefix('customer')->name('customer.')->gro
     // Dedicated Payment Page (Checkout Style)
     Route::get('/payment/{project}/{milestone}', [\App\Http\Controllers\Customer\CustomerPaymentController::class, 'showPaymentPage'])->name('payment.page');
 
+    // Cash Payment Success Page
+    Route::get('/payment/success/{project}/{milestone}', [\App\Http\Controllers\Customer\CustomerPaymentController::class, 'paymentSuccess'])->name('payment.cash-success');
+
     // Billing Details
     Route::post('/project/{project}/billing-details', [\App\Http\Controllers\Customer\CustomerPaymentController::class, 'saveBillingDetails'])->name('project.billing-details');
 
@@ -280,7 +285,7 @@ Route::middleware(['auth:customer'])->prefix('customer')->name('customer.')->gro
     Route::get('/project/{project}/invoice/download', [\App\Http\Controllers\Customer\CustomerInvoiceController::class, 'download'])->name('project.invoice.download');
 
     // Warranty (View-only - after full payment and work completion)
-    Route::get('/project/{project}/warranty', [\App\Http\Controllers\Customer\CustomerWarrantyController::class, 'view'])->name('customer.project.warranty');
+    Route::get('/project/{project}/warranty', [\App\Http\Controllers\Customer\CustomerWarrantyController::class, 'view'])->name('project.warranty');
 
     // Payment History
     Route::get('/payment-history', [\App\Http\Controllers\Customer\CustomerDashboardController::class, 'paymentHistory'])->name('payment.history');

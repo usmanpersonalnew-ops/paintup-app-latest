@@ -182,6 +182,9 @@ const handleDelete = (e) => {
                             <Link :href="route('admin.projects.quote', project.id)" class="text-green-600 hover:text-green-900 mr-3" title="View Quote">
                                 📄 Quote
                             </Link>
+                            <Link :href="route('admin.projects.payment-history', project.id)" class="text-purple-600 hover:text-purple-900 mr-3" title="View Payment History">
+                                💰 Payment
+                            </Link>
                             <Link :href="route('admin.projects.show', project.id)" class="text-blue-600 hover:text-blue-900 mr-3">
                                 Manage
                             </Link>

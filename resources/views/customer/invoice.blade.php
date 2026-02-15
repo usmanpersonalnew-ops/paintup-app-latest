@@ -29,6 +29,28 @@
         // Also get URL for web view
         $logoUrl = Storage::url($branding->logo_path);
     }
+
+    // Get signature for PDF (DomPDF works best with base64 encoded images)
+    $signatureDataUri = null;
+    $signatureUrl = null;
+    if (!empty($branding->signature_path)) {
+        // Try to get absolute file path
+        $signaturePath = storage_path('app/public/' . $branding->signature_path);
+        if (!file_exists($signaturePath)) {
+            $signaturePath = public_path('storage/' . $branding->signature_path);
+        }
+
+        // If file exists, encode as base64 for PDF
+        if (file_exists($signaturePath)) {
+            $imageData = file_get_contents($signaturePath);
+            $imageInfo = getimagesize($signaturePath);
+            $mimeType = $imageInfo['mime'] ?? 'image/png';
+            $signatureDataUri = 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+        }
+
+        // Also get URL for web view
+        $signatureUrl = Storage::url($branding->signature_path);
+    }
     @endphp
     <style>
         * {
@@ -236,7 +258,7 @@
         }
         .signatory-line {
             border-top: 1px solid #000;
-            margin-top: 40px;
+
             padding-top: 5px;
             font-size: 11px;
         }
@@ -244,6 +266,12 @@
             font-size: 10px;
             color: #333;
             margin-bottom: 5px;
+        }
+        .signature-image {
+            max-width: 150px;
+            max-height: 60px;
+            margin-bottom: 10px;
+            object-fit: contain;
         }
         @media print {
             body {
@@ -529,6 +557,13 @@
             <div class="signatory-section">
                 <div class="signatory-box">
                     <div class="for-text">For {{ $branding->company_name }}</div>
+                    @if(!empty($signatureDataUri))
+                        {{-- Use base64 encoded image (works for both PDF and web) --}}
+                        <img src="{{ $signatureDataUri }}" alt="Signature" class="signature-image">
+                    @elseif(!empty($signatureUrl))
+                        {{-- Fallback to URL if base64 not available --}}
+                        <img src="{{ $signatureUrl }}" alt="Signature" class="signature-image">
+                    @endif
                     <div class="signatory-line">
                         <br>
                         Authorized Signatory

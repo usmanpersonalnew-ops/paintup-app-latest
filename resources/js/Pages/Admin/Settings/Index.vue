@@ -13,6 +13,7 @@ const props = defineProps({
         default: () => ({
             company_name: 'PaintUp',
             logo_path: '',
+            signature_path: '',
             primary_color: '#2563eb',
             secondary_color: '#1e293b',
             support_whatsapp: '',
@@ -39,11 +40,28 @@ const getLogoUrl = () => {
 
 const logoPreview = ref(getLogoUrl());
 
+// Initialize signature preview - check both signature_url and generate from signature_path if needed
+const getSignatureUrl = () => {
+    if (props.settings?.signature_url) {
+        return props.settings.signature_url;
+    }
+    // Fallback: generate URL from signature_path if signature_url not provided
+    if (props.settings?.signature_path) {
+        return `/storage/${props.settings.signature_path}`;
+    }
+    return null;
+};
+
+const signaturePreview = ref(getSignatureUrl());
+
 // Debug: Log settings on mount
 console.log('Settings on mount:', props.settings);
 console.log('Logo URL:', props.settings?.logo_url);
 console.log('Logo Path:', props.settings?.logo_path);
 console.log('Logo Preview:', logoPreview.value);
+console.log('Signature URL:', props.settings?.signature_url);
+console.log('Signature Path:', props.settings?.signature_path);
+console.log('Signature Preview:', signaturePreview.value);
 
 // Watch for changes to settings prop (e.g., after form submission)
 watch(() => props.settings, (newSettings) => {
@@ -61,11 +79,20 @@ watch(() => props.settings, (newSettings) => {
         logoPreview.value = newLogoUrl;
         console.log('Set initial logo preview to:', logoPreview.value);
     }
+
+    // Watch for signature changes
+    const newSignatureUrl = newSettings?.signature_url || (newSettings?.signature_path ? `/storage/${newSettings.signature_path}` : null);
+    if (newSignatureUrl && !signaturePreview.value?.startsWith('blob:')) {
+        signaturePreview.value = newSignatureUrl;
+    } else if (newSignatureUrl && !signaturePreview.value) {
+        signaturePreview.value = newSignatureUrl;
+    }
 }, { immediate: true, deep: true });
 
 const form = useForm({
     company_name: props.settings.company_name,
     logo_path: null,
+    signature_path: null,
     primary_color: props.settings.primary_color,
     secondary_color: props.settings.secondary_color,
     support_whatsapp: props.settings.support_whatsapp,
@@ -81,6 +108,14 @@ const handleLogoChange = (event) => {
     if (file) {
         form.logo_path = file;
         logoPreview.value = URL.createObjectURL(file);
+    }
+};
+
+const handleSignatureChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        form.signature_path = file;
+        signaturePreview.value = URL.createObjectURL(file);
     }
 };
 
@@ -188,6 +223,42 @@ const submit = () => {
                             </label>
                             <p class="text-sm text-gray-500 mt-2">Upload PNG, JPG, or SVG (max 2MB)</p>
                             <InputError class="mt-1" :message="form.errors.logo_path" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Signature Upload -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
+                    <h2 class="text-lg font-semibold text-gray-900 border-b pb-2">Signature</h2>
+
+                    <div class="flex items-center gap-6">
+                        <div class="w-32 h-32 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden">
+                            <img
+                                v-if="signaturePreview"
+                                :src="signaturePreview"
+                                alt="Signature preview"
+                                class="w-full h-full object-contain"
+                            />
+                            <span v-else class="text-gray-400 text-sm">No signature</span>
+                        </div>
+                        <div class="flex-1">
+                            <label class="block">
+                                <span class="sr-only">Choose signature</span>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    @change="handleSignatureChange"
+                                    class="block w-full text-sm text-gray-500
+                                        file:mr-4 file:py-3 file:px-6
+                                        file:rounded-lg file:border-0
+                                        file:text-sm file:font-semibold
+                                        file:bg-blue-50 file:text-blue-700
+                                        hover:file:bg-blue-100
+                                        cursor-pointer"
+                                />
+                            </label>
+                            <p class="text-sm text-gray-500 mt-2">Upload PNG, JPG, or SVG (max 2MB)</p>
+                            <InputError class="mt-1" :message="form.errors.signature_path" />
                         </div>
                     </div>
                 </div>

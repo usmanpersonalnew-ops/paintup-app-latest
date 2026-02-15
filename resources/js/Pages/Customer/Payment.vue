@@ -161,8 +161,8 @@ const processPayment = async () => {
                 // Redirect to payment gateway
                 window.location.href = response.data.payment_url;
             } else {
-                // Cash payment - show success
-                router.visit(route('customer.dashboard'));
+                // Cash payment - redirect to success page
+                router.visit(route('customer.payment.cash-success', [props.project.id, props.milestone.name]));
             }
         } else {
             alert(response.data.message || 'Payment failed');

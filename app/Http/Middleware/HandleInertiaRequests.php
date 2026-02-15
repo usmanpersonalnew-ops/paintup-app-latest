@@ -38,6 +38,11 @@ class HandleInertiaRequests extends Middleware
             $branding['logo_url'] = $request->getSchemeAndHttpHost() . \Illuminate\Support\Facades\Storage::url($branding['logo_path']);
         }
 
+        // Generate full URL for signature using request's scheme and host
+        if ($branding['signature_path']) {
+            $branding['signature_url'] = $request->getSchemeAndHttpHost() . \Illuminate\Support\Facades\Storage::url($branding['signature_path']);
+        }
+
         return [
             ...parent::share($request),
             'auth' => [

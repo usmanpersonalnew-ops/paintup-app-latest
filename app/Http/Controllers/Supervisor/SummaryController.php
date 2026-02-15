@@ -160,22 +160,12 @@ class SummaryController extends Controller
     {
         \Log::info('sendWhatsAppMessage called for project', ['project_id' => $project->id]);
 
-        $customer = $project->customer;
+        $customerName = $project->client_name;
+        $customerPhone = $project->phone;
 
         // Use customer name from customer table, or project client_name, or fallback
-        $customerName = $customer->name
-            ?? $project->client_name
-            ?? 'Customer';
 
-        \Log::info('Customer data', [
-            'project_id' => $project->id,
-            'customer_id' => $customer?->id,
-            'customer_name' => $customerName,
-            'customer_phone' => $customer?->phone,
-            'project_phone' => $project->phone
-        ]);
-
-        if (!$customer || !$customer->phone) {
+        if (!$customerPhone) {
             return response()->json([
                 'success' => false,
                 'message' => 'Customer phone number not found.'
@@ -185,7 +175,7 @@ class SummaryController extends Controller
         $msg91Service = new Msg91WhatsappService();
 
         $sent = $msg91Service->sendQuoteSharedMessage(
-            $customer->phone,
+            $customerPhone,
             $customerName
         );
 

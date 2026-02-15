@@ -50,6 +50,15 @@ class PaymentController extends Controller
         $project->mid_status = 'PENDING';
         $project->save();
 
+        // Update milestone payment record
+        \App\Models\MilestonePayment::where('project_id', $project->id)
+            ->where('milestone_name', 'booking')
+            ->where('payment_status', 'AWAITING_CONFIRMATION')
+            ->update([
+                'payment_status' => \App\Models\MilestonePayment::STATUS_PAID,
+                'paid_at' => now(),
+            ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Cash booking payment confirmed successfully',
@@ -98,6 +107,15 @@ class PaymentController extends Controller
             }
             $project->save();
 
+            // Update milestone payment record
+            \App\Models\MilestonePayment::where('project_id', $project->id)
+                ->where('milestone_name', 'booking')
+                ->where('payment_status', 'AWAITING_CONFIRMATION')
+                ->update([
+                    'payment_status' => \App\Models\MilestonePayment::STATUS_PAID,
+                    'paid_at' => now(),
+                ]);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Booking cash payment confirmed successfully',
@@ -119,6 +137,15 @@ class PaymentController extends Controller
             $project->final_status = 'PENDING';
             $project->save();
 
+            // Update milestone payment record
+            \App\Models\MilestonePayment::where('project_id', $project->id)
+                ->where('milestone_name', 'mid')
+                ->whereIn('payment_status', ['AWAITING_CONFIRMATION', 'PENDING'])
+                ->update([
+                    'payment_status' => \App\Models\MilestonePayment::STATUS_PAID,
+                    'paid_at' => now(),
+                ]);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Mid payment cash confirmed successfully',
@@ -139,6 +166,15 @@ class PaymentController extends Controller
             $project->final_paid_at = now();
             $project->status = 'COMPLETED';
             $project->save();
+
+            // Update milestone payment record
+            \App\Models\MilestonePayment::where('project_id', $project->id)
+                ->where('milestone_name', 'final')
+                ->whereIn('payment_status', ['AWAITING_CONFIRMATION', 'PENDING'])
+                ->update([
+                    'payment_status' => \App\Models\MilestonePayment::STATUS_PAID,
+                    'paid_at' => now(),
+                ]);
 
             return response()->json([
                 'success' => true,

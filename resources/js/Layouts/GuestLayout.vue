@@ -31,9 +31,9 @@ const secondaryColor = settings.secondary_color || '#1e293b';
             <div class="relative z-10 max-w-md text-center">
                 <!-- Logo -->
                 <div class="mb-8">
-                    <img 
-                        v-if="logoUrl" 
-                        :src="logoUrl" 
+                    <img
+                        v-if="logoUrl"
+                        :src="logoUrl"
                         :alt="companyName"
                         class="h-20 w-auto mx-auto"
                     />
@@ -42,39 +42,9 @@ const secondaryColor = settings.secondary_color || '#1e293b';
 
                 <!-- Heading -->
                 <h1 class="text-4xl font-bold mb-4">Welcome to {{ companyName }}</h1>
-                
-                <!-- Subtext -->
-                <p class="text-lg opacity-90 mb-8">
-                    Professional Painting Management Platform
-                </p>
 
-                <!-- Features -->
-                <div class="space-y-4 text-left">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                            </svg>
-                        </div>
-                        <span class="text-sm">Professional painting services</span>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                            </svg>
-                        </div>
-                        <span class="text-sm">Real-time project tracking</span>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                            </svg>
-                        </div>
-                        <span class="text-sm">Transparent pricing & payments</span>
-                    </div>
-                </div>
+
+
             </div>
 
             <!-- Footer -->
@@ -88,9 +58,9 @@ const secondaryColor = settings.secondary_color || '#1e293b';
             <div class="w-full max-w-md">
                 <!-- Mobile Logo -->
                 <div class="lg:hidden text-center mb-8">
-                    <img 
-                        v-if="logoUrl" 
-                        :src="logoUrl" 
+                    <img
+                        v-if="logoUrl"
+                        :src="logoUrl"
                         :alt="companyName"
                         class="h-16 w-auto mx-auto mb-4"
                     />

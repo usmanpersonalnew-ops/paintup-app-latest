@@ -385,10 +385,10 @@ const displayNotes = computed(() => {
                                 <div v-for="(service, serviceIndex) in room.services" :key="serviceIndex" class="bg-orange-50 rounded-lg p-3">
                                     <div class="flex justify-between items-start">
                                         <div class="flex-1">
-                                            <p class="font-medium text-gray-800">{{ service.custom_name || service.masterService?.name || 'Service' }}</p>
+                                            <p class="font-medium text-gray-800">{{ service.custom_name || service.master_service?.name || service.masterService?.name || 'Service' }}</p>
                                             <p class="text-sm text-gray-600 mt-1">{{ getServiceDetails(service) }}</p>
-                                            <p v-if="service.masterService?.remarks" class="text-xs text-gray-500 mt-1">
-                                                {{ service.masterService.remarks }}
+                                            <p v-if="service.master_service?.remarks || service.masterService?.remarks" class="text-xs text-gray-500 mt-1">
+                                                {{ service.master_service?.remarks || service.masterService?.remarks }}
                                             </p>
                                         </div>
                                         <p class="font-bold text-gray-900 ml-4">{{ formatCurrency(service.amount || 0) }}</p>
@@ -410,6 +410,16 @@ const displayNotes = computed(() => {
                 <!-- Empty State -->
                 <div v-else class="px-6 py-8 text-center text-gray-500">
                     No items added yet
+                </div>
+            </div>
+
+            <!-- Notes / Exclusions -->
+            <div v-if="displayNotes" class="bg-white rounded-lg shadow mb-6">
+                <div class="px-6 py-4 border-b border-gray-100">
+                    <h2 class="text-lg font-semibold text-gray-800">📝 Notes / Exclusions</h2>
+                </div>
+                <div class="px-6 py-4">
+                    <p class="text-gray-700 whitespace-pre-wrap">{{ displayNotes }}</p>
                 </div>
             </div>
 
@@ -464,15 +474,6 @@ const displayNotes = computed(() => {
                 </div>
             </div>
 
-            <!-- Notes / Exclusions -->
-            <div v-if="displayNotes" class="bg-white rounded-lg shadow mb-6">
-                <div class="px-6 py-4 border-b border-gray-100">
-                    <h2 class="text-lg font-semibold text-gray-800">📝 Notes / Exclusions</h2>
-                </div>
-                <div class="px-6 py-4">
-                    <p class="text-gray-700 whitespace-pre-wrap">{{ displayNotes }}</p>
-                </div>
-            </div>
 
             <!-- Payment CTA (only for logged in customers, not admin view) -->
             <div v-if="isLoggedIn && !isAdminView && !isFinalPaid" class="bg-white rounded-lg shadow p-6">

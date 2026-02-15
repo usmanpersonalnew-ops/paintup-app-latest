@@ -12,6 +12,7 @@ class Setting extends Model
     protected $fillable = [
         'company_name',
         'logo_path',
+        'signature_path',
         'primary_color',
         'secondary_color',
         'support_whatsapp',
@@ -144,6 +145,7 @@ class Setting extends Model
     {
         $settings = static::getSettings();
         $logoUrl = null;
+        $signatureUrl = null;
 
         if ($settings->logo_path) {
             // Generate full URL - use asset() for public storage or construct full URL
@@ -152,10 +154,18 @@ class Setting extends Model
             $logoUrl = asset(ltrim($storagePath, '/'));
         }
 
+        if ($settings->signature_path) {
+            // Generate full URL for signature
+            $storagePath = \Illuminate\Support\Facades\Storage::url($settings->signature_path);
+            $signatureUrl = asset(ltrim($storagePath, '/'));
+        }
+
         return [
             'company_name' => $settings->company_name,
             'logo_path' => $settings->logo_path, // Keep original path for database reference
             'logo_url' => $logoUrl, // Full URL for frontend use
+            'signature_path' => $settings->signature_path,
+            'signature_url' => $signatureUrl,
             'primary_color' => $settings->primary_color,
             'secondary_color' => $settings->secondary_color,
             'support_whatsapp' => $settings->support_whatsapp,

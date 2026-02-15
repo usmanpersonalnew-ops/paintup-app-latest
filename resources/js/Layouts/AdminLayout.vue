@@ -52,7 +52,7 @@ const currentYear = new Date().getFullYear();
                             class="h-8 w-auto"
                         />
                         <ApplicationLogo v-else class="h-8 w-auto fill-current" />
-                        <span v-if="sidebarOpen" class="text-lg font-bold">{{ companyName }}</span>
+
                     </Link>
                 </div>
 

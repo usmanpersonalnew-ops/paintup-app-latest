@@ -521,4 +521,40 @@ class CustomerPaymentController extends Controller
             'message' => 'Billing details saved successfully',
         ]);
     }
+
+    /**
+     * Show Cash Payment Success Page
+     * GET /customer/payment/success/{project}/{milestone}
+     */
+    public function paymentSuccess(Project $project, string $milestone)
+    {
+        // Check authentication
+        if (!\Illuminate\Support\Facades\Auth::guard('customer')->check()) {
+            return redirect()->route('customer.login');
+        }
+
+        $customer = \Illuminate\Support\Facades\Auth::guard('customer')->user();
+
+        // Verify this project belongs to the customer
+        if ($project->phone !== $customer->phone) {
+            abort(403, 'You do not have access to this project.');
+        }
+
+        // Validate milestone
+        $validMilestones = ['booking', 'mid', 'final'];
+        if (!in_array($milestone, $validMilestones)) {
+            abort(404, 'Invalid milestone');
+        }
+
+        // Calculate milestone amounts
+        $milestoneData = $project->calculateMilestoneWithGst($milestone);
+
+        return Inertia::render('Customer/PaymentSuccess', [
+            'customer' => $customer,
+            'project' => $project,
+            'milestone' => $milestone,
+            'paymentAmount' => $milestoneData['total_amount'],
+            'paymentMethod' => 'CASH',
+        ]);
+    }
 }

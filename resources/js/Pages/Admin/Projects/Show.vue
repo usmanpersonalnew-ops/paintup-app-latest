@@ -1,5 +1,5 @@
 <script setup>
-import { useForm, Link } from '@inertiajs/vue3';
+import { useForm, Link, router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 
@@ -87,22 +87,41 @@ const confirmCashPayment = (milestone) => {
 };
 
 // Collect mid/final payment
-const collectPayment = (type) => {
+const collectPayment = async (type) => {
     const milestone = type === 'mid' ? 'mid' : 'final';
     if (!confirm(`Confirm ${milestone} payment collected?`)) return;
 
     processingCashConfirm.value = true;
 
-    const routeName = type === 'mid' ? 'admin.projects.collect-mid' : 'admin.projects.collect-final';
+    try {
+        // Use markMidPaid or markFinalPaid routes (they mark as PAID directly)
+        const routeName = type === 'mid' ? 'admin.projects.mark-mid-paid' : 'admin.projects.mark-final-paid';
 
-    form.post(route(routeName, props.project.id), {
-        onSuccess: () => {
-            window.location.reload();
-        },
-        onFinish: () => {
+        const response = await fetch(route(routeName, props.project.id), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                'Accept': 'application/json',
+            },
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Reload the page to refresh project data
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        } else {
+            alert(data.message || 'Failed to mark payment as received');
             processingCashConfirm.value = false;
-        },
-    });
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while processing the payment');
+        processingCashConfirm.value = false;
+    }
 };
 
 const statusColors = {
@@ -193,8 +212,17 @@ const sendWhatsAppMessage = () => {
 
         <!-- Payment Summary Card -->
         <div class="bg-white rounded-lg shadow mb-6 overflow-hidden">
-            <div class="px-6 py-4 bg-gray-100 border-b">
+            <div class="px-6 py-4 bg-gray-100 border-b flex justify-between items-center">
                 <h2 class="text-lg font-semibold text-gray-800">💰 Payment Details</h2>
+                <Link
+                    :href="route('admin.projects.payment-history', project.id)"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Payment History
+                </Link>
             </div>
             <div class="p-6">
                 <!-- Status and Method -->

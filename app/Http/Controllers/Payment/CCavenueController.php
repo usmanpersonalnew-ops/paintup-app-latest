@@ -29,7 +29,7 @@ class CCavenueController extends Controller
         ]);
 
         $amount = $request->amount;
-        
+
         // Validate milestone
         $validMilestones = ['booking', 'mid', 'final'];
         if (!in_array($milestone, $validMilestones)) {
@@ -194,30 +194,44 @@ class CCavenueController extends Controller
     protected function updatePaymentStatus(Project $project, string $milestone, string $orderId, string $trackingId = null, string $bankRefNo = null, string $paymentMode = null, string $cardName = null)
     {
         $now = now();
-        
+
         // Get amounts from session or calculate
         $baseAmount = session('ccavenue_base_amount', 0);
         $gstAmount = session('ccavenue_gst_amount', 0);
         $totalAmount = session('ccavenue_amount', 0);
 
         DB::transaction(function () use ($project, $milestone, $orderId, $trackingId, $bankRefNo, $paymentMode, $cardName, $now, $baseAmount, $gstAmount, $totalAmount) {
-            
-            // Create MilestonePayment record
-            MilestonePayment::create([
-                'project_id' => $project->id,
-                'milestone_name' => $milestone,
-                'base_amount' => $baseAmount,
-                'gst_amount' => $gstAmount,
-                'total_amount' => $totalAmount,
-                'payment_status' => MilestonePayment::STATUS_PAID,
-                'payment_method' => MilestonePayment::METHOD_ONLINE,
-                'payment_reference' => $orderId,
-                'tracking_id' => $trackingId,
-                'bank_ref_no' => $bankRefNo,
-                'payment_mode' => $paymentMode,
-                'card_name' => $cardName,
-                'paid_at' => $now,
-            ]);
+
+            // Check if payment already exists for this order ID to prevent duplicates
+            $existingPayment = MilestonePayment::where('project_id', $project->id)
+                ->where('milestone_name', $milestone)
+                ->where('payment_reference', $orderId)
+                ->first();
+
+            if ($existingPayment) {
+                // Payment already processed, just update project status if needed
+                Log::info('CCavenue: Payment already exists, skipping duplicate creation', [
+                    'payment_id' => $existingPayment->id,
+                    'order_id' => $orderId,
+                ]);
+            } else {
+                // Create MilestonePayment record
+                MilestonePayment::create([
+                    'project_id' => $project->id,
+                    'milestone_name' => $milestone,
+                    'base_amount' => $baseAmount,
+                    'gst_amount' => $gstAmount,
+                    'total_amount' => $totalAmount,
+                    'payment_status' => MilestonePayment::STATUS_PAID,
+                    'payment_method' => MilestonePayment::METHOD_ONLINE,
+                    'payment_reference' => $orderId,
+                    'tracking_id' => $trackingId,
+                    'bank_ref_no' => $bankRefNo,
+                    'payment_mode' => $paymentMode,
+                    'card_name' => $cardName,
+                    'paid_at' => $now,
+                ]);
+            }
 
             // Update project status
             switch ($milestone) {

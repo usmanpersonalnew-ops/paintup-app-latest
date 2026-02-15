@@ -68,11 +68,11 @@ const getPhotosUrl = (project) => {
 };
 
 const getWarrantyUrl = (project) => {
-    return route('customer.customer.project.warranty', project.id);
+    return route('customer.project.warranty', project.id);
 };
 
 const getInvoiceUrl = (project) => {
-    return route('customer.customer.project.invoice', project.id);
+    return route('customer.project.invoice', project.id);
 };
 </script>
 
