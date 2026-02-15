@@ -17,7 +17,7 @@ class CustomerQuoteController extends Controller
     {
         // Get authenticated customer
         $customer = Auth::guard('customer')->user();
-        
+
         if (!$customer) {
             return redirect()->route('customer.login');
         }
@@ -25,7 +25,7 @@ class CustomerQuoteController extends Controller
         // Find project and verify ownership by phone number
         $project = Project::where('id', $projectId)
             ->where('phone', $customer->phone) // Only show customer's own projects
-            ->with(['rooms.items.surface', 'rooms.items.product', 'rooms.items.system', 'rooms.services.masterService'])
+            ->with(['rooms.items.surface', 'rooms.items.product', 'rooms.items.system', 'rooms.services.masterService', 'quote'])
             ->first();
 
         if (!$project) {
@@ -47,7 +47,7 @@ class CustomerQuoteController extends Controller
                 $serviceAmount = $service->amount ?? 0;
                 $totalServiceAmount += $serviceAmount;
                 $roomTotal += $serviceAmount;
-                
+
                 // Ensure service name is populated
                 if (!$service->custom_name) {
                     // Try to get from masterService relationship first
@@ -85,9 +85,16 @@ class CustomerQuoteController extends Controller
         $isLoggedIn = Auth::guard('customer')->check();
         $customer = $isLoggedIn ? Auth::guard('customer')->user() : null;
 
+        // Get notes from quote if available
+        // Also ensure quote is included in project object for Vue to access
+        $notes = null;
+        if ($project->quote) {
+            $notes = $project->quote->notes ?? null;
+        }
+
         return Inertia::render('Customer/QuoteView', [
             'customer' => $customer,
-            'project' => $project,
+            'project' => $project, // Quote relationship is already loaded above
             'totals' => [
                 'paint' => $totalPaintAmount,
                 'services' => $totalServiceAmount,
@@ -97,6 +104,7 @@ class CustomerQuoteController extends Controller
                 'final_payment_amount' => $finalPaymentAmount,
             ],
             'isLoggedIn' => $isLoggedIn,
+            'notes' => $notes,
         ]);
     }
 }

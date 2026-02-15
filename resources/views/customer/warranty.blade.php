@@ -15,141 +15,306 @@
             box-sizing: border-box;
         }
         body {
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            line-height: 1.5;
-            color: #000;
-            background: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #1f2937;
+
+            min-height: 100vh;
             padding: 20px;
         }
         .warranty-container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
-            background: #fff;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
         }
         .header {
-            border-bottom: 2px solid #000;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
+            background: #1e293b;
+            color: white;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .header-top {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 20px;
         }
-        .company-name {
-            font-size: 20px;
-            font-weight: bold;
-            color: #000;
+        .company-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
-        .company-tagline {
-            font-size: 11px;
-            color: #666;
-            margin-top: 3px;
+        .logo-container {
+            width: 80px;
+            height: 80px;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+        }
+        .logo-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .company-details h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .company-details p {
+            font-size: 13px;
+            opacity: 0.9;
         }
         .doc-title {
-            font-size: 16px;
-            font-weight: bold;
             text-align: right;
         }
-        .section {
-            margin-bottom: 20px;
+        .doc-title h2 {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
         }
-        .section-title {
-            font-size: 12px;
-            font-weight: bold;
-            background: #f5f5f5;
-            padding: 8px 10px;
-            border: 1px solid #000;
+        .doc-title .badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .section {
+            padding: 30px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .section:last-child {
             border-bottom: none;
         }
-        .info-box {
-            border: 1px solid #000;
-            padding: 12px;
-        }
-        .info-row {
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 20px;
             display: flex;
-            margin-bottom: 6px;
+            align-items: center;
+            gap: 10px;
         }
-        .info-row:last-child {
-            margin-bottom: 0;
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+        .info-card {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 16px;
+            transition: all 0.3s ease;
+        }
+        .info-card:hover {
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            transform: translateY(-2px);
         }
         .info-label {
-            font-weight: bold;
-            width: 120px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
         }
         .info-value {
-            flex: 1;
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
         }
         .dates-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0;
-            border: 1px solid #000;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
         }
-        .date-cell {
-            padding: 12px;
+        .date-card {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 2px solid #bae6fd;
+            border-radius: 12px;
+            padding: 20px;
             text-align: center;
-            border-right: 1px solid #000;
+            transition: all 0.3s ease;
         }
-        .date-cell:last-child {
-            border-right: none;
+        .date-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
         }
         .date-label {
-            font-size: 10px;
-            color: #666;
+            font-size: 11px;
+            font-weight: 600;
+            color: #0369a1;
             text-transform: uppercase;
-            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
         }
         .date-value {
-            font-size: 14px;
-            font-weight: bold;
+            font-size: 18px;
+            font-weight: 700;
+            color: #0c4a6e;
         }
         .warranty-table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 20px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
-        .warranty-table th,
-        .warranty-table td {
-            border: 1px solid #000;
-            padding: 10px 12px;
-            font-size: 11px;
+        .warranty-table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
         }
         .warranty-table th {
-            background: #f5f5f5;
-            font-weight: bold;
+            padding: 16px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
             text-align: left;
+        }
+        .warranty-table th:last-child {
+            text-align: center;
+        }
+        .warranty-table tbody tr {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            transition: background 0.2s ease;
+        }
+        .warranty-table tbody tr:hover {
+            background: #f9fafb;
+        }
+        .warranty-table tbody tr:last-child {
+            border-bottom: none;
+        }
+        .warranty-table td {
+            padding: 16px;
+            font-size: 14px;
+            color: #374151;
         }
         .warranty-table .text-center {
             text-align: center;
         }
-        .warranty-table .text-right {
-            text-align: right;
-        }
-        .warranty-value {
-            font-weight: bold;
+        .warranty-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
         }
         .disclaimer {
-            font-size: 10px;
-            color: #666;
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            border-radius: 8px;
+            padding: 20px;
             margin-top: 20px;
-            padding-top: 15px;
-            border-top: 1px solid #ddd;
-            font-style: italic;
+            font-size: 13px;
+            color: #92400e;
+            line-height: 1.7;
+        }
+        .disclaimer-title {
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         .footer {
-            margin-top: 25px;
-            text-align: right;
-            font-size: 10px;
-            color: #999;
+            background: #f9fafb;
+            padding: 20px 30px;
+            text-align: center;
+            border-top: 1px solid #e5e7eb;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .footer-content {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .cert-number {
+            font-weight: 700;
+            color: #667eea;
         }
         @media print {
             body {
+                background: white;
                 padding: 0;
             }
             .warranty-container {
-                margin: 0;
+                box-shadow: none;
+                border-radius: 0;
             }
-            @page {
-                margin: 0.5cm;
+            .header {
+                background: #667eea !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .header {
+                padding: 20px;
+            }
+            .header-top {
+                flex-direction: column;
+            }
+            .doc-title {
+                text-align: left;
+            }
+            .company-details h1 {
+                font-size: 20px;
+            }
+            .doc-title h2 {
+                font-size: 22px;
+            }
+            .section {
+                padding: 20px;
+            }
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            .dates-grid {
+                grid-template-columns: 1fr;
+            }
+            .warranty-table {
+                font-size: 12px;
+            }
+            .warranty-table th,
+            .warranty-table td {
+                padding: 12px 8px;
             }
         }
     </style>
@@ -158,50 +323,58 @@
     <div class="warranty-container">
         <!-- Header -->
         <div class="header">
-            <div style="display: flex; align-items: center; gap: 15px;">
-                @if(!empty($branding->logo_path))
-                    <img src="{{ Storage::url($branding->logo_path) }}" alt="Logo" style="max-width: 80px; max-height: 50px;">
-                @endif
-                <div>
-                    <div class="company-name">{{ $branding->company_name }}</div>
-                    <div class="company-tagline">Professional Painting Services</div>
+            <div class="header-top">
+                <div class="company-info">
+                    @if(!empty($branding->logo_path))
+                        <div class="logo-container">
+                            <img src="{{ Storage::url($branding->logo_path) }}" alt="Logo">
+                        </div>
+                    @endif
+                    <div class="company-details">
+                        <h1>{{ $branding->company_name ?? 'PaintUp' }}</h1>
+                        <p>Professional Painting Services</p>
+                    </div>
+                </div>
+                <div class="doc-title">
+                    <h2>WARRANTY CERTIFICATE</h2>
+                    <span class="badge">Official Document</span>
                 </div>
             </div>
-            <div class="doc-title">WARRANTY CERTIFICATE</div>
         </div>
 
         <!-- Project Info -->
         <div class="section">
-            <div class="section-title">Project Information</div>
-            <div class="info-box">
-                <div class="info-row">
-                    <span class="info-label">Customer:</span>
-                    <span class="info-value">{{ $project->client_name }}</span>
+            <div class="section-title">📋 Project Information</div>
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="info-label">Customer Name</div>
+                    <div class="info-value">{{ $project->client_name }}</div>
                 </div>
-                <div class="info-row">
-                    <span class="info-label">Location:</span>
-                    <span class="info-value">{{ $project->location }}</span>
+                <div class="info-card">
+                    <div class="info-label">Project Location</div>
+                    <div class="info-value">{{ $project->location }}</div>
                 </div>
-                <div class="info-row">
-                    <span class="info-label">Project ID:</span>
-                    <span class="info-value">#{{ $project->id }}</span>
+                <div class="info-card">
+                    <div class="info-label">Project ID</div>
+                    <div class="info-value">#{{ $project->id }}</div>
                 </div>
             </div>
         </div>
 
         <!-- Key Dates -->
         <div class="section">
+            <div class="section-title">📅 Certificate Details</div>
             <div class="dates-grid">
-                <div class="date-cell">
+                <div class="date-card">
                     <div class="date-label">Issue Date</div>
                     <div class="date-value">{{ $issue_date ?? '—' }}</div>
                 </div>
-                <div class="date-cell">
+                <div class="date-card">
                     <div class="date-label">Valid Till</div>
                     <div class="date-value">{{ $valid_till ?? '—' }}</div>
                 </div>
-                <div class="date-cell">
-                    <div class="date-label">Certificate No.</div>
+                <div class="date-card">
+                    <div class="date-label">Certificate Number</div>
                     <div class="date-value">{{ $certificate_number }}</div>
                 </div>
             </div>
@@ -210,27 +383,27 @@
         <!-- Surface-wise Warranty -->
         @if(!empty($warranty_items))
             <div class="section">
-                <div class="section-title">Surface-wise Warranty Details</div>
+                <div class="section-title">🛡️ Warranty Coverage Details</div>
                 <table class="warranty-table">
                     <thead>
                         <tr>
                             <th style="width: 25%;">Surface</th>
                             <th style="width: 30%;">Product</th>
                             <th style="width: 30%;">System</th>
-                            <th style="width: 15%;" class="text-center">Warranty</th>
+                            <th style="width: 15%;" class="text-center">Warranty Period</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($warranty_items as $item)
                             <tr>
-                                <td>{{ $item['surface'] }}</td>
+                                <td><strong>{{ $item['surface'] }}</strong></td>
                                 <td>{{ $item['product'] }}</td>
                                 <td>{{ $item['system'] }}</td>
                                 <td class="text-center">
                                     @if($item['warranty_months'] > 0)
-                                        <span class="warranty-value">{{ $item['warranty_months'] }} Months</span>
+                                        <span class="warranty-badge">{{ $item['warranty_months'] }} Months</span>
                                     @else
-                                        —
+                                        <span style="color: #9ca3af;">—</span>
                                     @endif
                                 </td>
                             </tr>
@@ -242,17 +415,25 @@
 
         <!-- Disclaimer -->
         <div class="disclaimer">
-            This warranty covers peeling, flaking, and blistering of painted surfaces under normal conditions.
-            Structural cracks, water seepage, humidity damage, or damage caused by third-party alterations are not covered.
-            This is a system-generated certificate and does not require a physical signature.
+            <div class="disclaimer-title">
+                <span>⚠️</span>
+                <span>Warranty Terms & Conditions</span>
+            </div>
+            <p>
+                This warranty covers peeling, flaking, and blistering of painted surfaces under normal conditions.
+                Structural cracks, water seepage, humidity damage, or damage caused by third-party alterations are not covered.
+                This is a system-generated certificate and does not require a physical signature.
+            </p>
         </div>
 
         <!-- Footer -->
         <div class="footer">
-            @if(!empty($branding->support_email))
-                For warranty claims: {{ $branding->support_email }}
-            @endif
-            | {{ $certificate_number }}
+            <div class="footer-content">
+                @if(!empty($branding->support_email))
+                    <span>For warranty claims: <strong>{{ $branding->support_email }}</strong></span>
+                @endif
+                <span class="cert-number">Certificate #{{ $certificate_number }}</span>
+            </div>
         </div>
     </div>
 </body>

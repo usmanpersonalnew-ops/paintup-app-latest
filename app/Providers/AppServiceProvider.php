@@ -23,13 +23,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
-        
+
         // Force HTTPS for asset URLs when behind a proxy (ngrok)
-        if (request()->header('X-Forwarded-Proto') === 'https' || 
+        if (request()->header('X-Forwarded-Proto') === 'https' ||
             request()->server('HTTP_X_FORWARDED_PROTO') === 'https') {
             \Illuminate\Support\Facades\URL::forceScheme('https');
         }
-        
+
         // Explicitly bind 'zone' parameter to ProjectRoom model
         // This prevents Laravel from auto-binding to QuoteZone model
         \Illuminate\Support\Facades\Route::model('zone', \App\Models\ProjectRoom::class);

@@ -207,7 +207,7 @@ class ProjectController extends Controller
     {
         // Find project - admin can view any project
         $project = Project::where('id', $id)
-            ->with(['rooms.items.surface', 'rooms.items.product', 'rooms.items.system', 'rooms.services.masterService'])
+            ->with(['rooms.items.surface', 'rooms.items.product', 'rooms.items.system', 'rooms.services.masterService', 'quote'])
             ->firstOrFail();
 
         // Calculate totals - sum pre-computed amounts only
@@ -259,10 +259,16 @@ class ProjectController extends Controller
         $midPaymentAmount = round($baseTotal * 0.40, 2);
         $finalPaymentAmount = round($baseTotal * 0.20, 2);
 
+        // Get notes from quote if available
+        $notes = null;
+        if ($project->quote) {
+            $notes = $project->quote->notes ?? null;
+        }
+
         // Admin viewing - no customer login required
         return Inertia::render('Customer/QuoteView', [
             'customer' => null,
-            'project' => $project,
+            'project' => $project, // Quote relationship is already loaded above
             'totals' => [
                 'paint' => $totalPaintAmount,
                 'services' => $totalServiceAmount,
@@ -273,6 +279,7 @@ class ProjectController extends Controller
             ],
             'isLoggedIn' => false, // Admin viewing, not customer
             'isAdminView' => true, // Flag to show admin-specific UI
+            'notes' => $notes,
         ]);
     }
 

@@ -50,12 +50,12 @@ class CustomerDashboardController extends Controller
             // Calculate base_total (excluding GST)
             $discountAmount = $project->discount_amount ?? 0;
             $baseTotal = $totalPaintAmount + $totalServiceAmount - $discountAmount;
-            
+
             // Calculate milestone amounts from base_total (40-40-20)
             $bookingAmount = round($baseTotal * 0.40, 2);
             $midAmount = round($baseTotal * 0.40, 2);
             $finalAmount = round($baseTotal * 0.20, 2);
-            
+
             // Persist only database columns (NOT painting_total or services_total)
             $project->total_amount = $totalPaintAmount + $totalServiceAmount;
             $project->base_total = $baseTotal;
@@ -64,7 +64,7 @@ class CustomerDashboardController extends Controller
             $project->mid_amount = $midAmount;
             $project->final_amount = $finalAmount;
             $project->save();
-            
+
             // Ensure public_token exists (generate if missing)
             if (!$project->public_token) {
                 $project->public_token = \Illuminate\Support\Str::random(32);
@@ -75,17 +75,17 @@ class CustomerDashboardController extends Controller
         // Add computed milestone data for each project (Single Source of Truth)
         $projects->each(function ($project) {
             $baseTotal = $project->base_total ?? $project->total_amount ?? 0;
-            
+
             // Calculate milestone amounts
             $bookingAmount = round($baseTotal * 0.40, 2);
             $midAmount = round($baseTotal * 0.40, 2);
             $finalAmount = round($baseTotal * 0.20, 2);
-            
+
             // Determine next milestone and outstanding amount
             $nextMilestone = null;
             $outstandingAmount = 0;
             $allPaid = false;
-            
+
             if ($project->booking_status !== 'PAID') {
                 $nextMilestone = [
                     'name' => 'Booking (40%)',
@@ -108,7 +108,7 @@ class CustomerDashboardController extends Controller
                 $allPaid = true;
                 $outstandingAmount = 0;
             }
-            
+
             $project->next_milestone = $nextMilestone;
             $project->outstanding_amount = $outstandingAmount;
             $project->all_paid = $allPaid;
@@ -155,6 +155,12 @@ class CustomerDashboardController extends Controller
             ->get()
             ->map(function ($payment) use ($projects) {
                 $project = $projects->find($payment->project_id);
+                // Get transaction ID - prefer tracking_id, then payment_reference, then bank_ref_no
+                $transactionId = $payment->tracking_id
+                    ?? $payment->payment_reference
+                    ?? $payment->bank_ref_no
+                    ?? '-';
+
                 return [
                     'id' => $payment->id,
                     'project_id' => $payment->project_id,
@@ -166,6 +172,10 @@ class CustomerDashboardController extends Controller
                     'payment_method' => $payment->payment_method,
                     'payment_status' => $payment->payment_status,
                     'paid_at' => $payment->paid_at,
+                    'transaction_id' => $transactionId,
+                    'payment_reference' => $payment->payment_reference,
+                    'tracking_id' => $payment->tracking_id,
+                    'bank_ref_no' => $payment->bank_ref_no,
                 ];
             });
 

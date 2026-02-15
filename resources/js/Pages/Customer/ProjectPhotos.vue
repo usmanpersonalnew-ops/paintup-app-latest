@@ -58,6 +58,22 @@ const getStageColor = (stage) => {
   };
   return colors[stage] || 'from-gray-400 to-gray-600';
 };
+
+const handleImageError = (event) => {
+  // If image fails to load, try to convert Google Drive link to direct image URL
+  const img = event.target;
+  const originalSrc = img.src;
+  
+  // Try to extract file ID and convert to direct image URL
+  const fileIdMatch = originalSrc.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (fileIdMatch && fileIdMatch[1]) {
+    const fileId = fileIdMatch[1];
+    img.src = `https://drive.google.com/uc?export=view&id=${fileId}`;
+  } else {
+    // Fallback: show placeholder
+    img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2U1ZTdlYiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbWFnZSBub3QgYXZhaWxhYmxlPC90ZXh0Pjwvc3ZnPg==';
+  }
+};
 </script>
 
 <template>
@@ -125,16 +141,17 @@ const getStageColor = (stage) => {
                 class="group relative aspect-square bg-gray-100 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
               >
                 <img
-                  :src="photo.google_drive_link"
+                  :src="photo.image_url || photo.google_drive_link"
                   :alt="photo.file_name"
                   class="w-full h-full object-cover"
+                  @error="handleImageError($event)"
                 />
                 
                 <!-- Hover Overlay -->
                 <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent 
                   opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-4">
                   <a
-                    :href="photo.google_drive_link"
+                    :href="photo.image_url || photo.google_drive_link"
                     target="_blank"
                     class="px-4 py-2 bg-white/90 rounded-lg font-medium text-gray-700
                       hover:bg-white transform scale-95 group-hover:scale-100 transition-transform text-sm"

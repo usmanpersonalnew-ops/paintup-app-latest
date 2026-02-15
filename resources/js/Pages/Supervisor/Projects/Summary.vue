@@ -13,6 +13,10 @@ const props = defineProps({
     },
     subtotal: Number,
     flash: Object,
+    initialNotes: {
+        type: String,
+        default: '',
+    },
 });
 
 const couponForm = useForm({
@@ -22,15 +26,17 @@ const couponForm = useForm({
 const form = useForm({
     discount_amount: 0,
     tax_percent: 18,
-    notes: '',
+    notes: props.initialNotes || '',
 });
 
 // Calculate effective discount (from coupon or manual)
 const effectiveDiscount = computed(() => {
     if (props.project.coupon_code) {
-        return props.project.discount_amount || 0;
+        // Convert to number to handle string values from database
+        const discount = parseFloat(props.project.discount_amount) || 0;
+        return isNaN(discount) ? 0 : discount;
     }
-    return form.discount_amount || 0;
+    return parseFloat(form.discount_amount) || 0;
 });
 
 // Calculate subtotal (before discount)
@@ -71,6 +77,17 @@ const formatCurrency = (value) => {
     }).format(safeValue);
 };
 
+const saveNotes = () => {
+    form.post(route('supervisor.summary.save-notes', props.project.id), {
+        data: {
+            notes: form.notes,
+        },
+        onSuccess: () => {
+            // Notes saved successfully
+        },
+    });
+};
+
 const submit = () => {
     form.post(route('supervisor.finalize', props.project.id), {
         data: form.data(),
@@ -86,7 +103,7 @@ const downloadPdf = () => {
 
 const sendWhatsApp = () => {
     if (!confirm('Send WhatsApp message to customer with login link?')) return;
-    
+
     fetch(route('supervisor.summary.send-whatsapp', props.project.id), {
         method: 'POST',
         headers: {
@@ -112,7 +129,7 @@ const applyCoupon = () => {
         alert('Please enter a coupon code');
         return;
     }
-    
+
     couponForm.post(route('supervisor.projects.apply-coupon', props.project.id), {
         onSuccess: () => {
             couponForm.reset();
@@ -125,7 +142,7 @@ const applyCoupon = () => {
 
 const removeCoupon = () => {
     if (!confirm('Are you sure you want to remove this coupon?')) return;
-    
+
     couponForm.post(route('supervisor.projects.remove-coupon', props.project.id), {
         onSuccess: () => {
             // Coupon removed
@@ -135,8 +152,8 @@ const removeCoupon = () => {
 
 // Check if payment exists (coupon cannot be modified)
 const hasPayment = computed(() => {
-    return props.project.booking_status === 'PAID' || 
-           props.project.mid_status === 'PAID' || 
+    return props.project.booking_status === 'PAID' ||
+           props.project.mid_status === 'PAID' ||
            props.project.final_status === 'PAID';
 });
 </script>
@@ -186,7 +203,7 @@ const hasPayment = computed(() => {
             <!-- Coupon Section -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                 <h2 class="text-base font-bold text-gray-800 mb-3">COUPON CODE</h2>
-                
+
                 <!-- Applied Coupon Display -->
                 <div v-if="project.coupon_code" class="mb-4">
                     <div class="bg-green-50 border border-green-200 rounded-lg p-3">
@@ -208,11 +225,11 @@ const hasPayment = computed(() => {
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Apply Coupon Form -->
                 <div v-if="!project.coupon_code && !hasPayment">
                     <div class="flex space-x-2">
-                        <TextInput 
+                        <TextInput
                             v-model="couponForm.coupon_code"
                             type="text"
                             class="h-12 flex-1 uppercase"
@@ -233,7 +250,7 @@ const hasPayment = computed(() => {
                         {{ couponForm.errors.error }}
                     </p>
                 </div>
-                
+
                 <!-- Locked Message -->
                 <div v-if="hasPayment && !project.coupon_code" class="text-gray-500 text-sm">
                     Coupon cannot be applied after payment is made
@@ -290,12 +307,21 @@ const hasPayment = computed(() => {
             <!-- Notes / Exclusions - Screen E Wireframe -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                 <h2 class="text-base font-bold text-gray-800 mb-3">NOTES / EXCLUSIONS</h2>
-                <textarea 
+                <textarea
                     v-model="form.notes"
-                    class="w-full p-3 border border-gray-300 rounded-lg h-24" 
+                    class="w-full p-3 border border-gray-300 rounded-lg h-24"
                     placeholder="Deep cleaning not included..."
                     :disabled="hasPayment"
                 ></textarea>
+                <button
+                    v-if="!hasPayment"
+                    @click="saveNotes"
+                    :disabled="form.processing"
+                    class="mt-3 w-full bg-blue-600 text-white py-2 rounded-lg font-medium disabled:opacity-50"
+                >
+                    {{ form.processing ? 'Saving...' : '💾 SAVE NOTES' }}
+                </button>
+                <p v-if="form.processing" class="text-sm text-gray-500 mt-2 text-center">Saving notes...</p>
             </div>
 
             <!-- Generate PDF Button - Screen E Wireframe -->

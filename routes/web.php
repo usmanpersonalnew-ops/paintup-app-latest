@@ -106,6 +106,9 @@ Route::prefix('admin')->middleware(['auth:web', 'verified'])->group(function () 
     Route::post('/projects/{project}/mark-mid-paid', [AdminPaymentController::class, 'markMidPaid'])->name('admin.projects.mark-mid-paid');
     Route::post('/projects/{project}/mark-final-paid', [AdminPaymentController::class, 'markFinalPaid'])->name('admin.projects.mark-final-paid');
 
+    // Payment History
+    Route::get('/payment-history', [AdminPaymentController::class, 'paymentHistory'])->name('admin.payment.history');
+
     // Work Status Routes - Admin has full control
     Route::post('/projects/{project}/work-status', [AdminProjectWorkController::class, 'updateStatus'])->name('admin.projects.work-status');
 
@@ -179,6 +182,7 @@ Route::middleware(['auth:web', 'verified'])->prefix('supervisor')->name('supervi
 
     // Screen E: Summary
     Route::get('/projects/{project}/summary', [\App\Http\Controllers\Supervisor\SummaryController::class, 'show'])->name('summary');
+    Route::post('/projects/{project}/save-notes', [\App\Http\Controllers\Supervisor\SummaryController::class, 'saveNotes'])->name('summary.save-notes');
     Route::post('/projects/{project}/finalize', [\App\Http\Controllers\Supervisor\SummaryController::class, 'finalize'])->name('finalize');
     Route::get('/projects/{project}/pdf', [\App\Http\Controllers\Supervisor\SummaryController::class, 'generatePdf'])->name('pdf');
     Route::post('/projects/{project}/send-whatsapp', [\App\Http\Controllers\Supervisor\SummaryController::class, 'sendWhatsAppMessage'])->name('summary.send-whatsapp');

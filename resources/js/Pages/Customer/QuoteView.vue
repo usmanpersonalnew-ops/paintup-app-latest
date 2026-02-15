@@ -34,6 +34,10 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    notes: {
+        type: String,
+        default: null,
+    },
 });
 
 // Formatters
@@ -209,6 +213,11 @@ const getMilestoneIcon = (milestone) => {
     if (milestone === 'final' && !isMidPaid.value) return '🔒';
     return '⏳';
 };
+
+// Get notes - check both props.notes and project.quote.notes as fallback
+const displayNotes = computed(() => {
+    return props.notes || props.project?.quote?.notes || null;
+});
 </script>
 
 <template>
@@ -452,6 +461,16 @@ const getMilestoneIcon = (milestone) => {
                             {{ getMilestoneStatus('final') }}
                         </span>
                     </div>
+                </div>
+            </div>
+
+            <!-- Notes / Exclusions -->
+            <div v-if="displayNotes" class="bg-white rounded-lg shadow mb-6">
+                <div class="px-6 py-4 border-b border-gray-100">
+                    <h2 class="text-lg font-semibold text-gray-800">📝 Notes / Exclusions</h2>
+                </div>
+                <div class="px-6 py-4">
+                    <p class="text-gray-700 whitespace-pre-wrap">{{ displayNotes }}</p>
                 </div>
             </div>
 

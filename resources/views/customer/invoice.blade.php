@@ -49,49 +49,84 @@
             padding: 15px;
         }
         .invoice-header {
-            display: flex;
-            justify-content: space-between;
-            border-bottom: 2px solid #000;
-            padding-bottom: 15px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
             margin-bottom: 20px;
         }
         .company-left {
-            max-width: 50%;
+
+            padding: 12px 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
         .company-logo {
             max-width: 150px;
             max-height: 60px;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
         .company-name {
             font-size: 22px;
-            font-weight: bold;
-            color: #000;
-            margin-bottom: 5px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 8px;
         }
         .company-details {
-            font-size: 11px;
-            color: #333;
-            line-height: 1.5;
+            font-size: 12px;
+            color: #475569;
+            line-height: 1.6;
+        }
+        .company-details p {
+            margin-bottom: 4px;
+        }
+        .company-details p:last-child {
+            margin-bottom: 0;
         }
         .invoice-right {
-            text-align: right;
+
+
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
         .invoice-title {
             font-size: 24px;
-            font-weight: bold;
-            color: #000;
+            font-weight: 700;
+            color: #1e293b;
             margin-bottom: 15px;
+            text-align: center;
         }
         .invoice-meta-info {
-            font-size: 11px;
-            text-align: right;
-            line-height: 1.6;
+
+
+            padding: 10px 15px;
+            margin-top: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        .invoice-meta-info p {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .invoice-meta-info p:last-child {
+            margin-bottom: 0;
+            border-bottom: none;
         }
         .invoice-meta-info strong {
-            display: inline-block;
-            width: 100px;
-            text-align: left;
+            font-weight: 700;
+            color: #475569;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            min-width: 120px;
+        }
+        .invoice-meta-info .meta-value {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 13px;
+            text-align: right;
         }
         .section-header {
             background: #f5f5f5;
@@ -283,25 +318,59 @@
                 @endif
                 <div class="company-name">{{ $branding->company_name }}</div>
                 <div class="company-details">
-                    {{ $branding->address ?? '' }}<br>
+                    @if(!empty($branding->address))
+                        <p><strong>Address:</strong> {{ $branding->address }}</p>
+                    @endif
                     @if(!empty($branding->gst_number))
-                        GSTIN: {{ $branding->gst_number }}<br>
+                        <p><strong>GSTIN:</strong> {{ $branding->gst_number }}</p>
                     @endif
                     @if(!empty($branding->support_email))
-                        Email: {{ $branding->support_email }}<br>
+                        <p><strong>Email:</strong> {{ $branding->support_email }}</p>
                     @endif
                     @if(!empty($branding->support_whatsapp))
-                        Phone: {{ $branding->support_whatsapp }}
+                        <p><strong>Phone:</strong> {{ $branding->support_whatsapp }}</p>
                     @endif
                 </div>
             </div>
             <div class="invoice-right">
                 <div class="invoice-title">TAX INVOICE</div>
                 <div class="invoice-meta-info">
-                    <p><strong>Invoice No:</strong> {{ $invoice_number }}</p>
-                    <p><strong>Invoice Date:</strong> {{ $invoice_date }}</p>
-                    <p><strong>Place of Supply:</strong> {{ $project->location ?? 'Mumbai, Maharashtra' }}</p>
-                    <p><strong>State Code:</strong> 27 (Maharashtra)</p>
+                    @php
+                        $placeOfSupply = $project->location ?? 'Mumbai, Maharashtra';
+                        // Determine state code based on location
+                        $stateCode = '27';
+                        $stateName = 'Maharashtra';
+                        $locationLower = strtolower($placeOfSupply);
+                        if (strpos($locationLower, 'ahmedabad') !== false || strpos($locationLower, 'gujarat') !== false || strpos($locationLower, 'gandhinagar') !== false || strpos($locationLower, 'surat') !== false || strpos($locationLower, 'vadodara') !== false) {
+                            $stateCode = '24';
+                            $stateName = 'Gujarat';
+                        } elseif (strpos($locationLower, 'mumbai') !== false || strpos($locationLower, 'pune') !== false || strpos($locationLower, 'nagpur') !== false || strpos($locationLower, 'maharashtra') !== false) {
+                            $stateCode = '27';
+                            $stateName = 'Maharashtra';
+                        } elseif (strpos($locationLower, 'delhi') !== false || strpos($locationLower, 'new delhi') !== false) {
+                            $stateCode = '07';
+                            $stateName = 'Delhi';
+                        } elseif (strpos($locationLower, 'bangalore') !== false || strpos($locationLower, 'bengaluru') !== false || strpos($locationLower, 'karnataka') !== false) {
+                            $stateCode = '29';
+                            $stateName = 'Karnataka';
+                        }
+                    @endphp
+                    <p>
+                        <strong>Invoice No:</strong>
+                        <span class="meta-value">{{ $invoice_number }}</span>
+                    </p>
+                    <p>
+                        <strong>Invoice Date:</strong>
+                        <span class="meta-value">{{ $invoice_date }}</span>
+                    </p>
+                    <p>
+                        <strong>Place of Supply:</strong>
+                        <span class="meta-value">{{ $placeOfSupply }}</span>
+                    </p>
+                    <p>
+                        <strong>State Code:</strong>
+                        <span class="meta-value">{{ $stateCode }} ({{ $stateName }})</span>
+                    </p>
                 </div>
             </div>
         </div>

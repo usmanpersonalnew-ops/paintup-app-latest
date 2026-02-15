@@ -12,9 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('projects', function (Blueprint $table) {
-            $table->date('home_visit_date')->nullable()->after('supervisor_id');
-            $table->time('home_visit_time')->nullable()->after('home_visit_date');
-            $table->text('home_visit_supervisors')->nullable()->after('home_visit_time'); // JSON array of supervisor IDs
+            if (!Schema::hasColumn('projects', 'home_visit_date')) {
+                $table->date('home_visit_date')->nullable()->after('supervisor_id');
+            }
+            if (!Schema::hasColumn('projects', 'home_visit_time')) {
+                $table->time('home_visit_time')->nullable()->after('home_visit_date');
+            }
+            if (!Schema::hasColumn('projects', 'home_visit_supervisors')) {
+                $table->text('home_visit_supervisors')->nullable()->after('home_visit_time'); // JSON array of supervisor IDs
+            }
         });
     }
 

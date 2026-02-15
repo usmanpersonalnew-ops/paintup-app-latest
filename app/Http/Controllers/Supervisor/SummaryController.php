@@ -18,24 +18,51 @@ class SummaryController extends Controller
     public function show(Project $project)
     {
         // Load zones (which are ProjectRoom objects) with items and services
-        $project->load(['zones.items', 'zones.services', 'zones.media', 'coupon']);
-        
+        $project->load(['zones.items', 'zones.services', 'zones.media', 'coupon', 'quote']);
+
         $paintTotal = $project->zones->sum(function ($zone) {
             return $zone->items->sum('amount');
         });
-        
+
         $serviceTotal = $project->zones->sum(function ($zone) {
             return $zone->services->sum('amount');
         });
-        
+
         $subtotal = $paintTotal + $serviceTotal;
-        
+
         return inertia('Supervisor/Projects/Summary', [
             'project' => $project,
             'paintTotal' => $paintTotal,
             'serviceTotal' => $serviceTotal,
             'subtotal' => $subtotal,
+            'initialNotes' => $project->quote->notes ?? '',
         ]);
+    }
+
+    /**
+     * Save notes without finalizing (just update notes field).
+     */
+    public function saveNotes(Request $request, Project $project)
+    {
+        $validated = $request->validate([
+            'notes' => 'nullable|string',
+        ]);
+
+        // Fix null quote bug - create quote if it doesn't exist
+        if (!$project->quote) {
+            $quote = Quote::create([
+                'project_id' => $project->id,
+                'status' => 'DRAFT',
+            ]);
+            $project->refresh();
+        }
+
+        // Update only notes
+        $project->quote->update([
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        return back()->with('success', 'Notes saved successfully!');
     }
 
     /**
@@ -54,15 +81,15 @@ class SummaryController extends Controller
         $paintTotal = $project->zones->sum(function ($zone) {
             return $zone->items->sum('amount');
         });
-        
+
         $serviceTotal = $project->zones->sum(function ($zone) {
             return $zone->services->sum('amount');
         });
-        
+
         $subtotal = $paintTotal + $serviceTotal;
         $discount = $validated['discount_amount'] ?? 0;
         $taxPercent = $validated['tax_percent'] ?? 18;
-        
+
         $taxableAmount = $subtotal - $discount;
         $taxAmount = $taxableAmount * ($taxPercent / 100);
         $grandTotal = $taxableAmount + $taxAmount;
@@ -96,11 +123,11 @@ class SummaryController extends Controller
     public function generatePdf(Project $project)
     {
         $project->load(['zones.items', 'zones.services.masterService', 'zones.media', 'quote', 'coupon']);
-        
+
         $paintTotal = $project->zones->sum(function ($zone) {
             return $zone->items->sum('amount');
         });
-        
+
         $serviceTotal = $project->zones->sum(function ($zone) {
             // Ensure custom_name is populated from masterService for display
             foreach ($zone->services as $service) {
@@ -110,19 +137,19 @@ class SummaryController extends Controller
             }
             return $zone->services->sum('amount');
         });
-        
+
         $subtotal = $paintTotal + $serviceTotal;
-        
+
         // Use coupon discount if applied, otherwise use quote discount
         $discount = $project->discount_amount ?? $project->quote->discount_amount ?? 0;
-        
+
         $taxPercent = $project->quote->tax_percent ?? 18;
         $taxAmount = $project->quote->tax_amount ?? 0;
         $grandTotal = $project->quote->grand_total ?? $subtotal;
         $notes = $project->quote->notes ?? '';
 
         $pdf = Pdf::loadView('pdf.quote', compact('project', 'paintTotal', 'serviceTotal', 'subtotal', 'discount', 'taxPercent', 'taxAmount', 'grandTotal', 'notes'));
-        
+
         return $pdf->download('quote-' . $project->id . '-' . date('Y-m-d') . '.pdf');
     }
 
@@ -132,14 +159,14 @@ class SummaryController extends Controller
     public function sendWhatsAppMessage(Project $project)
     {
         \Log::info('sendWhatsAppMessage called for project', ['project_id' => $project->id]);
-        
+
         $customer = $project->customer;
-        
+
         // Use customer name from customer table, or project client_name, or fallback
         $customerName = $customer->name
             ?? $project->client_name
             ?? 'Customer';
-        
+
         \Log::info('Customer data', [
             'project_id' => $project->id,
             'customer_id' => $customer?->id,
@@ -156,19 +183,19 @@ class SummaryController extends Controller
         }
 
         $msg91Service = new Msg91WhatsappService();
-        
+
         $sent = $msg91Service->sendQuoteSharedMessage(
             $customer->phone,
             $customerName
         );
-        
+
         if ($sent) {
             return response()->json([
                 'success' => true,
                 'message' => 'WhatsApp message sent to customer.'
             ]);
         }
-        
+
         return response()->json([
             'success' => false,
             'message' => 'Failed to send WhatsApp message.'

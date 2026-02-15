@@ -409,6 +409,14 @@ class Project extends Model
     }
 
     /**
+     * Get the quote associated with this project
+     */
+    public function quote()
+    {
+        return $this->hasOne(Quote::class);
+    }
+
+    /**
      * Check if any payment has been made
      */
     public function hasPayment(): bool

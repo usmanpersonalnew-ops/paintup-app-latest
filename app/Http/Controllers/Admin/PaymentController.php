@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class PaymentController extends Controller
 {
@@ -226,6 +227,60 @@ class PaymentController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Final payment marked as PAID manually. Project completed!',
+        ]);
+    }
+
+    /**
+     * Show payment history page for admin (all payments)
+     */
+    public function paymentHistory()
+    {
+        // Get all projects
+        $projects = Project::orderBy('created_at', 'desc')->get();
+
+        // Calculate milestone amounts for each project
+        $projects->each(function ($project) {
+            $baseTotal = $project->base_total ?? $project->total_amount ?? 0;
+            $project->booking_amount = round($baseTotal * 0.40, 2);
+            $project->mid_amount = round($baseTotal * 0.40, 2);
+            $project->final_amount = round($baseTotal * 0.20, 2);
+        });
+
+        // Get all payments from database
+        $payments = \App\Models\MilestonePayment::where('payment_status', 'PAID')
+            ->orderBy('paid_at', 'desc')
+            ->get()
+            ->map(function ($payment) use ($projects) {
+                $project = $projects->find($payment->project_id);
+                // Get transaction ID - prefer tracking_id, then payment_reference, then bank_ref_no
+                $transactionId = $payment->tracking_id
+                    ?? $payment->payment_reference
+                    ?? $payment->bank_ref_no
+                    ?? '-';
+
+                return [
+                    'id' => $payment->id,
+                    'project_id' => $payment->project_id,
+                    'project_name' => $project ? $project->client_name : 'Unknown',
+                    'customer_phone' => $project ? $project->phone : '-',
+                    'milestone_name' => $payment->milestone_name,
+                    'base_amount' => $payment->base_amount,
+                    'gst_amount' => $payment->gst_amount,
+                    'total_amount' => $payment->total_amount,
+                    'payment_method' => $payment->payment_method,
+                    'payment_status' => $payment->payment_status,
+                    'paid_at' => $payment->paid_at,
+                    'transaction_id' => $transactionId,
+                    'payment_reference' => $payment->payment_reference,
+                    'tracking_id' => $payment->tracking_id,
+                    'bank_ref_no' => $payment->bank_ref_no,
+                ];
+            });
+
+        return Inertia::render('Customer/PaymentHistory', [
+            'isAdminView' => true,
+            'projects' => $projects,
+            'payments' => $payments,
         ]);
     }
 }
