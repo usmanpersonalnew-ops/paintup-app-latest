@@ -295,10 +295,10 @@ const displayNotes = computed(() => {
                             <p class="text-sm text-gray-500">Location</p>
                             <p class="font-medium text-gray-900">{{ project.location || 'N/A' }}</p>
                         </div>
-                        <div v-if="gstNumber">
+                        <!-- <div v-if="gstNumber">
                             <p class="text-sm text-gray-500">GST Number</p>
                             <p class="font-medium text-gray-900">{{ gstNumber }}</p>
-                        </div>
+                        </div> -->
                     </div>
                 </div>
             </div>

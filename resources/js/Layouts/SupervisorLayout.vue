@@ -21,18 +21,18 @@ const navItems = [
 <template>
     <div class="min-h-screen bg-gray-50 flex flex-col">
         <!-- Header -->
-        <header :style="{ backgroundColor: primaryColor }" class="text-white px-4 py-3 flex items-center justify-between shadow-md">
+        <!-- <header :style="{ backgroundColor: primaryColor }" class="text-white px-4 py-3 flex items-center justify-between shadow-md">
             <div class="flex items-center gap-2">
-                <img 
-                    v-if="logoUrl" 
-                    :src="logoUrl" 
+                <img
+                    v-if="logoUrl"
+                    :src="logoUrl"
                     :alt="companyName"
                     class="h-8 w-auto"
                 />
                 <h1 v-else class="text-lg font-semibold">{{ companyName }}</h1>
             </div>
             <span class="text-sm opacity-80">Supervisor</span>
-        </header>
+        </header> -->
 
         <!-- Main Content -->
         <main class="flex-1 pb-20 overflow-y-auto">

@@ -165,7 +165,8 @@ class PaymentController extends Controller
             'payment_method' => 'required|in:ONLINE,CASH',
         ]);
 
-        if ($project->mid_status !== 'PAID') {
+        // Allow both PAID and CASH_PENDING status for mid payment
+        if ($project->mid_status !== 'PAID' && $project->mid_status !== 'CASH_PENDING') {
             return response()->json(['success' => false, 'message' => 'Please collect mid payment first']);
         }
 

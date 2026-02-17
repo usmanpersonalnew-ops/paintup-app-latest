@@ -121,14 +121,25 @@ const submit = () => {
 
     if (isEditMode.value) {
         // Update existing service
+        console.log('Updating service:', {
+            projectRoom: props.zone.id,
+            service: props.editService.id,
+            formData: form.data()
+        });
+
         form.put(
-            route('supervisor.zones.service.update', { projectRoom: props.zone.id, service: props.editService.id }),
+            route('supervisor.zones.service.update', {
+                projectRoom: props.zone.id,
+                quoteService: props.editService.id
+            }),
             {
                 onSuccess: () => {
+                    console.log('Service updated successfully');
                     submitting.value = false;
                 },
                 onError: (errors) => {
-                    console.log('Validation errors:', errors);
+                    console.error('Validation errors:', errors);
+                    alert('Error updating service: ' + (errors.message || JSON.stringify(errors)));
                     submitting.value = false;
                 },
                 onFinish: () => {
@@ -138,14 +149,21 @@ const submit = () => {
         );
     } else {
         // Create new service
+        console.log('Creating service:', {
+            projectRoom: props.zone.id,
+            formData: form.data()
+        });
+
         form.post(
             route('supervisor.zones.service.store', { projectRoom: props.zone.id }),
             {
                 onSuccess: () => {
+                    console.log('Service created successfully');
                     submitting.value = false;
                 },
                 onError: (errors) => {
-                    console.log('Validation errors:', errors);
+                    console.error('Validation errors:', errors);
+                    alert('Error creating service: ' + (errors.message || JSON.stringify(errors)));
                     submitting.value = false;
                 },
                 onFinish: () => {
@@ -322,14 +340,13 @@ const formatCurrency = (value) => {
             </div>
 
             <!-- SAVE BUTTON -->
-            <div class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t shadow-lg">
+            <div class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t shadow-lg z-50">
                 <button
-                    type="button"
-                    @click="submit"
-                    :disabled="submitting"
-                    class="w-full bg-blue-600 text-white py-4 rounded-lg font-bold text-lg disabled:opacity-50"
+                    type="submit"
+                    :disabled="submitting || form.processing"
+                    class="w-full bg-blue-600 text-white py-4 rounded-lg font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {{ submitting ? 'Saving...' : 'SAVE SERVICE' }}
+                    {{ submitting || form.processing ? 'Saving...' : 'SAVE SERVICE' }}
                 </button>
             </div>
         </form>

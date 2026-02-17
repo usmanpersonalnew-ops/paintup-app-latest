@@ -1,5 +1,5 @@
 <script setup>
-import { useForm, Link } from '@inertiajs/vue3';
+import { useForm, Link, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import axios from 'axios';
 
@@ -42,7 +42,7 @@ const getWorkStatusLabel = (status) => {
 // Get available work status transitions for supervisor
 const getAvailableWorkStatus = () => {
     const currentStatus = props.project.work_status;
-    
+
     // Supervisor transitions: ASSIGNED → IN_PROGRESS → ON_HOLD → COMPLETED
     const transitions = {
         'ASSIGNED': 'IN_PROGRESS',
@@ -50,7 +50,7 @@ const getAvailableWorkStatus = () => {
         'ON_HOLD': 'IN_PROGRESS',
         'IN_PROGRESS': 'COMPLETED',
     };
-    
+
     return transitions[currentStatus] || null;
 };
 
@@ -73,14 +73,14 @@ const getWorkActionColor = (status) => {
 // Update work status
 const updateWorkStatus = async (newStatus) => {
     if (!confirm(`Change work status to "${getWorkStatusLabel(newStatus)}"?`)) return;
-    
+
     processingWorkStatus.value = true;
-    
+
     try {
         const res = await axios.post(`/supervisor/projects/${props.project.id}/work-status`, {
             work_status: newStatus
         });
-        
+
         if (res.data.success || !res.data.error) {
             window.location.reload();
         } else {
@@ -94,8 +94,35 @@ const updateWorkStatus = async (newStatus) => {
 };
 
 const addZone = () => {
+    if (!form.name || !form.name.trim()) {
+        alert('Please enter a zone name');
+        return;
+    }
+
+    console.log('Creating zone:', {
+        projectId: props.project.id,
+        formData: form.data()
+    });
+
     form.post(route('supervisor.zones.store', props.project.id), {
-        onSuccess: () => form.reset(),
+        onSuccess: () => {
+            console.log('Zone created successfully');
+            form.reset();
+            // Reload the page to show the new zone
+            router.visit(window.location.pathname, {
+                preserveState: false,
+                preserveScroll: false,
+            });
+        },
+        onError: (errors) => {
+            console.error('Error creating zone:', errors);
+            if (errors.name) {
+                alert('Error: ' + errors.name[0]);
+            } else {
+                alert('Error creating zone. Please check the console for details.');
+            }
+        },
+        preserveScroll: true,
     });
 };
 
@@ -134,12 +161,12 @@ const canCollectFinalPayment = () => isMidPaymentPaid() && !isFinalPaymentPaid()
 // Confirm cash booking payment
 const confirmCashBooking = async () => {
     if (!confirm('Confirm cash booking payment received from customer?')) return;
-    
+
     processingCashConfirm.value = true;
-    
+
     try {
         const res = await axios.post(`/supervisor/projects/${props.project.id}/confirm-cash-booking`, {});
-        
+
         if (res.data.success) {
             window.location.reload();
         } else {
@@ -155,9 +182,9 @@ const confirmCashBooking = async () => {
 // Confirm cash payment for milestone
 const confirmCashPayment = (milestone) => {
     if (!confirm(`Confirm ${milestone} cash payment received from customer?`)) return;
-    
+
     processingCashConfirm.value = true;
-    
+
     form.post(route('supervisor.projects.confirm-cash', props.project.id), {
         data: { milestone },
         onSuccess: () => {
@@ -174,22 +201,26 @@ const collectPayment = async (type) => {
     const milestone = type === 'mid' ? 'mid' : 'final';
     const paymentMethod = props.project.payment_method === 'CASH' ? 'CASH' : 'ONLINE';
     if (!confirm(`Confirm ${milestone} payment collected via ${paymentMethod}?`)) return;
-    
+
     processingCashConfirm.value = true;
-    
+
     try {
         const res = await axios.post(`/supervisor/projects/${props.project.id}/collect-${milestone}`, {
             payment_method: paymentMethod
         });
-        
+
         if (res.data.success) {
-            window.location.reload();
+            // Reload the page to update the project data
+            router.visit(window.location.pathname, {
+                preserveState: false,
+                preserveScroll: false,
+            });
         } else {
             alert(res.data.message || 'Failed to collect payment');
+            processingCashConfirm.value = false;
         }
     } catch (e) {
         alert(e.response?.data?.message || 'An error occurred');
-    } finally {
         processingCashConfirm.value = false;
     }
 };
@@ -201,7 +232,7 @@ const collectPayment = async (type) => {
             <Link :href="route('supervisor.projects.index')" class="text-blue-100 text-sm mb-2 block">← Back to Projects</Link>
             <h1 class="text-xl font-bold">{{ project.client_name }}</h1>
             <p class="text-blue-100 text-sm">📍 {{ project.location }}</p>
-            
+
             <!-- Payment Status Indicator -->
             <div class="mt-3 flex flex-wrap items-center gap-2">
                 <!-- Status Badge -->
@@ -214,7 +245,7 @@ const collectPayment = async (type) => {
                 }]">
                     {{ project.status === 'AWAITING_CASH_CONFIRMATION' ? 'AWAITING CASH' : project.status }}
                 </span>
-                
+
                 <!-- Payment Method -->
                 <span v-if="project.payment_method" :class="['px-2 py-1 rounded text-xs font-bold', {
                     'bg-green-50 text-green-700': project.payment_method === 'ONLINE',
@@ -223,7 +254,7 @@ const collectPayment = async (type) => {
                     {{ project.payment_method === 'ONLINE' ? '🟢 Online' : '💵 Cash' }}
                 </span>
             </div>
-            
+
             <!-- Cash Confirmation Alert -->
             <div v-if="canConfirmCash()" class="mt-3 bg-orange-500 p-3 rounded-lg">
                 <p class="text-sm font-medium">💰 Cash Booking Pending Confirmation</p>
@@ -236,7 +267,7 @@ const collectPayment = async (type) => {
                     {{ processingCashConfirm ? 'Processing...' : '✓ Confirm Cash Booking Received' }}
                 </button>
             </div>
-            
+
             <!-- Milestone Payments Progress -->
             <div v-if="isBookingPaid()" class="mt-3 bg-blue-700 p-3 rounded-lg">
                 <p class="text-xs font-medium mb-2">📊 Payment Milestones</p>
@@ -257,9 +288,9 @@ const collectPayment = async (type) => {
                         <p class="text-xs opacity-75">{{ isFinalPaymentPaid() ? '✓ Paid' : 'Pending' }}</p>
                     </div>
                 </div>
-                
+
                 <!-- Collect Mid Payment Button -->
-                <button 
+                <button
                     v-if="canCollectMidPayment()"
                     @click="collectPayment('mid')"
                     :disabled="processingCashConfirm"
@@ -267,9 +298,9 @@ const collectPayment = async (type) => {
                 >
                     {{ processingCashConfirm ? 'Processing...' : '💰 Collect Mid Payment' }}
                 </button>
-                
+
                 <!-- Collect Final Payment Button -->
-                <button 
+                <button
                     v-if="canCollectFinalPayment()"
                     @click="collectPayment('final')"
                     :disabled="processingCashConfirm"
@@ -277,7 +308,7 @@ const collectPayment = async (type) => {
                 >
                     {{ processingCashConfirm ? 'Processing...' : '💰 Collect Final Payment' }}
                 </button>
-                
+
                 <!-- Cash Confirmed By Info -->
                 <p v-if="project.cash_confirmed_by" class="mt-2 text-xs text-green-200">
                     ✓ Cash confirmed by supervisor
@@ -302,7 +333,7 @@ const collectPayment = async (type) => {
                         </span>
                     </div>
                 </div>
-                
+
                 <!-- Work Status Action Button -->
                 <button
                     v-if="getAvailableWorkStatus()"
@@ -313,7 +344,7 @@ const collectPayment = async (type) => {
                     {{ processingWorkStatus ? 'Processing...' : getWorkActionLabel(getAvailableWorkStatus()) }}
                 </button>
             </div>
-            
+
             <!-- Work Status Timeline -->
             <div class="mt-4 flex items-center gap-1">
                 <template v-for="(status, index) in ['PENDING', 'ASSIGNED', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CLOSED']" :key="status">
@@ -337,20 +368,20 @@ const collectPayment = async (type) => {
                 <p class="text-xs font-medium mb-2 text-gray-300">💳 Manual Payment Actions</p>
                 <div class="flex flex-wrap gap-2">
                     <button
-                        v-if="project.mid_status !== 'PAID'"
+                        v-if="project.mid_status !== 'PAID' && project.mid_status !== 'CASH_PENDING'"
                         @click="collectPayment('mid')"
                         :disabled="processingCashConfirm"
                         class="px-3 py-1 bg-blue-500 text-white rounded text-xs font-medium hover:bg-blue-600 disabled:opacity-50"
                     >
-                        Mark Mid PAID
+                        {{ processingCashConfirm ? 'Processing...' : 'Mark Mid PAID' }}
                     </button>
                     <button
-                        v-if="project.mid_status === 'PAID' && project.final_status !== 'PAID'"
+                        v-if="(project.mid_status === 'PAID' || project.mid_status === 'CASH_PENDING') && project.final_status !== 'PAID' && project.final_status !== 'CASH_PENDING'"
                         @click="collectPayment('final')"
                         :disabled="processingCashConfirm"
                         class="px-3 py-1 bg-purple-500 text-white rounded text-xs font-medium hover:bg-purple-600 disabled:opacity-50"
                     >
-                        Mark Final PAID
+                        {{ processingCashConfirm ? 'Processing...' : 'Mark Final PAID' }}
                     </button>
                 </div>
             </div>
@@ -358,13 +389,13 @@ const collectPayment = async (type) => {
 
         <div class="p-4 max-w-2xl mx-auto">
             <!-- Screen A: Zone Creation Form -->
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 mb-6">
+            <form @submit.prevent="addZone" class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 mb-6">
                 <h2 class="text-lg font-bold text-gray-800 mb-4">Create New Zone</h2>
-                
+
                 <!-- Zone Name -->
                 <div class="mb-4">
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Zone Name</label>
-                    <input v-model="form.name" type="text" placeholder="e.g. Master Bedroom" 
+                    <input v-model="form.name" type="text" placeholder="e.g. Master Bedroom"
                         class="w-full h-12 px-4 border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 text-base">
                 </div>
 
@@ -407,15 +438,15 @@ const collectPayment = async (type) => {
                 </div>
 
                 <!-- Create Button -->
-                <button @click="addZone" :disabled="form.processing"
-                    class="w-full h-12 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700 disabled:opacity-50 transition text-base">
-                    Create Zone
+                <button type="submit" :disabled="form.processing || !form.name || !form.name.trim()"
+                    class="w-full h-12 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition text-base">
+                    {{ form.processing ? 'Creating...' : 'Create Zone' }}
                 </button>
-            </div>
+            </form>
 
             <!-- Zones List (Overview) -->
             <h3 class="text-gray-800 font-bold mb-3">Project Zones</h3>
-            
+
             <div v-if="project.rooms && project.rooms.length > 0" class="space-y-3">
                 <Link v-for="room in project.rooms" :key="room.id"
                      :href="route('supervisor.zones.show', room.id)"
@@ -424,7 +455,7 @@ const collectPayment = async (type) => {
                         <div>
                             <div class="flex items-center gap-2 mb-1">
                                 <h4 class="font-bold text-gray-900">{{ room.name }}</h4>
-                                <span :class="room.type === 'INTERIOR' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'" 
+                                <span :class="room.type === 'INTERIOR' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'"
                                       class="px-2 py-0.5 rounded-full text-xs font-medium">
                                     {{ room.type }}
                                 </span>
