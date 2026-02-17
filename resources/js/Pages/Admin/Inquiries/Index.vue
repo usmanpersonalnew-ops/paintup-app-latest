@@ -38,6 +38,32 @@ const formatDate = (dateString) => {
         return dateString;
     }
 };
+
+const formatVisitDate = (dateString) => {
+    if (!dateString) return '';
+    try {
+        const date = new Date(dateString);
+        const day = date.getDate();
+        const month = date.toLocaleDateString('en-IN', { month: 'short' });
+
+        // Check if time is included (not midnight or has time component)
+        const hasTime = dateString.includes('T') || dateString.includes(' ') ||
+                       (date.getHours() !== 0 || date.getMinutes() !== 0);
+
+        if (hasTime) {
+            const hours = date.getHours();
+            const minutes = date.getMinutes();
+            const ampm = hours >= 12 ? 'pm' : 'am';
+            const displayHours = hours % 12 || 12;
+            const displayMinutes = minutes.toString().padStart(2, '0');
+            return `${day} ${month}`;
+        } else {
+            return `${day} ${month}`;
+        }
+    } catch (e) {
+        return dateString;
+    }
+};
 </script>
 
 <template>
@@ -85,13 +111,18 @@ const formatDate = (dateString) => {
                         <td class="p-4 text-sm text-gray-500 font-medium">{{ formatDate(lead.created_at) }}</td>
 
                         <td class="p-4">
-                            <div class="font-bold text-gray-900">{{ lead.name }}</div>
-                            <div class="text-xs text-gray-500">{{ lead.phone }}</div>
-                            <div v-if="lead.email" class="text-xs text-gray-400">{{ lead.email }}</div>
-                            <div v-if="lead.pincode" class="text-xs text-gray-400">📍 {{ lead.pincode }}</div>
-                            <div v-if="lead.property_type" class="text-xs text-gray-400">🏠 {{ lead.property_type }}</div>
-                            <div v-if="lead.visit_date" class="text-xs text-blue-600">📅 Visit: {{ formatDate(lead.visit_date) }}</div>
-                            <div v-if="lead.whatsapp_enabled" class="text-xs text-green-600">✓ WhatsApp Enabled</div>
+                            <div class="space-y-1.5">
+                                <div class="font-bold text-base text-gray-900">{{ lead.name }}</div>
+                                <div class="text-sm text-gray-700">{{ lead.phone }}</div>
+                                <div v-if="lead.email" class="text-sm text-gray-600">{{ lead.email }}</div>
+                                <div v-if="lead.pincode" class="text-sm text-gray-600">📍 {{ lead.pincode }}</div>
+                                <div v-if="lead.property_type" class="text-sm text-gray-600">🏠 {{ lead.property_type }}</div>
+                                <div v-if="lead.visit_date" class="text-sm text-blue-600 font-medium">📅 Visit: {{ formatVisitDate(lead.visit_date) }}</div>
+                                <div v-if="lead.construction_ongoing" class="text-xs text-gray-500">
+                                    <span class="font-medium">Construction:</span> {{ lead.construction_ongoing }}
+                                </div>
+                                <div v-if="lead.whatsapp_enabled" class="text-xs text-green-600 font-medium">✓ WhatsApp Enabled</div>
+                            </div>
                         </td>
 
                         <td class="p-4">
