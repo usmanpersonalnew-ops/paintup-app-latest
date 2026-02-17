@@ -387,8 +387,8 @@ const displayNotes = computed(() => {
                                         <div class="flex-1">
                                             <p class="font-medium text-gray-800">{{ service.custom_name || service.master_service?.name || service.masterService?.name || 'Service' }}</p>
                                             <p class="text-sm text-gray-600 mt-1">{{ getServiceDetails(service) }}</p>
-                                            <p v-if="service.master_service?.remarks || service.masterService?.remarks" class="text-xs text-gray-500 mt-1">
-                                                {{ service.master_service?.remarks || service.masterService?.remarks }}
+                                            <p v-if="service.remarks || service.master_service?.remarks || service.masterService?.remarks" class="text-xs text-gray-500 mt-1">
+                                                {{ service.remarks || service.master_service?.remarks || service.masterService?.remarks }}
                                             </p>
                                         </div>
                                         <p class="font-bold text-gray-900 ml-4">{{ formatCurrency(service.amount || 0) }}</p>

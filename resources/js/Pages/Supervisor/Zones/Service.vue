@@ -46,7 +46,16 @@ onMounted(() => {
         form.qty = service.quantity || 0;
         form.rate = service.rate || 0;
         form.amount = service.amount || 0;
+        // Load existing remarks (overridden or original) - this preserves supervisor's custom remarks
         form.remarks = service.remarks || '';
+
+        // If in edit mode and no remarks exist, try to get from master service as fallback
+        if (!form.remarks && service.master_service_id) {
+            const masterService = props.services.find(s => s.id === service.master_service_id);
+            if (masterService && masterService.remarks) {
+                form.remarks = masterService.remarks;
+            }
+        }
     }
 });
 
@@ -92,8 +101,11 @@ watch(selectedService, (newService) => {
         form.rate = newService.default_rate || 0;
         // Auto-populate custom_name with service name for catalog services
         form.custom_name = newService.name || '';
-        // Auto-populate remarks from master service if available
-        form.remarks = newService.remarks || '';
+        // Auto-populate remarks from master service ONLY if remarks field is empty
+        // This allows supervisor to override remarks without them being overwritten
+        if (!form.remarks || form.remarks.trim() === '') {
+            form.remarks = newService.remarks || '';
+        }
     }
 });
 

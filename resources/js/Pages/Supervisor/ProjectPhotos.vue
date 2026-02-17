@@ -15,6 +15,7 @@ const props = defineProps({
 const isUploading = ref(false);
 const selectedFiles = ref([]);
 const selectedStage = ref('before');
+const fileInput = ref(null);
 
 const form = useForm({
   photos: [],
@@ -42,13 +43,28 @@ const uploadPhotos = () => {
 
   isUploading.value = true;
 
+  // Update form with current stage
+  form.stage = selectedStage.value;
+
+  // Use forceFormData for file uploads
   form.post(route('supervisor.photos.store', props.project.id), {
+    forceFormData: true,
     onSuccess: () => {
       selectedFiles.value = [];
       form.photos = [];
+      form.stage = 'before';
+      selectedStage.value = 'before';
+      // Reset file input
+      if (fileInput.value) {
+        fileInput.value.value = '';
+      }
       isUploading.value = false;
     },
-    onError: () => {
+    onError: (errors) => {
+      console.error('Upload errors:', errors);
+      isUploading.value = false;
+    },
+    onFinish: () => {
       isUploading.value = false;
     },
   });
@@ -82,7 +98,7 @@ const handleImageError = (event) => {
   // If image fails to load, try to convert Google Drive link to direct image URL
   const img = event.target;
   const originalSrc = img.src;
-  
+
   // Handle drive.usercontent.google.com format
   if (originalSrc.includes('drive.usercontent.google.com')) {
     const fileIdMatch = originalSrc.match(/[?&]id=([a-zA-Z0-9_-]+)/);
@@ -92,7 +108,7 @@ const handleImageError = (event) => {
       return;
     }
   }
-  
+
   // Try to extract file ID from other Google Drive URL formats
   const fileIdMatch = originalSrc.match(/[?&]id=([a-zA-Z0-9_-]+)/);
   if (fileIdMatch && fileIdMatch[1]) {
@@ -169,6 +185,7 @@ const activeTab = ref('before');
 
         <div class="space-y-3">
           <input
+            ref="fileInput"
             type="file"
             multiple
             accept="image/*"

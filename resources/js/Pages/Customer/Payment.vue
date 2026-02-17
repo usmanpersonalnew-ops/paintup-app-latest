@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { usePage, router } from '@inertiajs/vue3';
 import CustomerLayout from '@/Layouts/CustomerLayout.vue';
+import axios from 'axios';
 
 const page = usePage();
 const props = defineProps({
@@ -97,10 +98,16 @@ const validateGstin = () => {
     return true;
 };
 
-// Save billing details
+// Save billing details (only if business type)
 const saveBillingDetails = async () => {
-    if (!validateGstin()) return;
-    
+    if (buyingType.value === 'BUSINESS' && !validateGstin()) return;
+
+    if (buyingType.value === 'INDIVIDUAL') {
+        // For individual, proceed directly to payment
+        processPayment();
+        return;
+    }
+
     isSavingBilling.value = true;
     try {
         const response = await axios.post(`/customer/project/${props.project.id}/billing-details`, {
@@ -112,7 +119,7 @@ const saveBillingDetails = async () => {
             state: state.value,
             pincode: pincode.value,
         });
-        
+
         if (response.data.success) {
             // Continue to payment
             processPayment();
@@ -127,7 +134,7 @@ const saveBillingDetails = async () => {
 // Process payment
 const processPayment = async () => {
     isProcessing.value = true;
-    
+
     try {
         let endpoint = '';
         switch (props.milestone.name) {
@@ -143,7 +150,7 @@ const processPayment = async () => {
                 endpoint = `/customer/project/${props.project.id}/final-payment`;
                 break;
         }
-        
+
         const response = await axios.post(endpoint, {
             payment_method: paymentMethod.value,
             billing_details: {
@@ -155,7 +162,7 @@ const processPayment = async () => {
                 pincode: pincode.value,
             },
         });
-        
+
         if (response.data.success) {
             if (paymentMethod.value === 'ONLINE' && response.data.payment_url) {
                 // Redirect to payment gateway
@@ -192,8 +199,8 @@ const indianStates = [
         <div class="max-w-4xl mx-auto">
             <!-- Back Button -->
             <div class="mb-4">
-                <a 
-                    :href="route('customer.dashboard')" 
+                <a
+                    :href="route('customer.dashboard')"
                     class="inline-flex items-center text-gray-600 hover:text-gray-800"
                 >
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -209,26 +216,26 @@ const indianStates = [
                     <!-- Section 1: Order Summary -->
                     <div class="bg-white rounded-lg shadow p-6 mb-6">
                         <h2 class="text-xl font-bold text-gray-800 mb-4">📦 Order Summary</h2>
-                        
+
                         <div class="bg-gray-50 rounded-lg p-4">
                             <!-- Milestone Info -->
                             <div class="flex justify-between items-center mb-4">
                                 <span class="text-lg font-medium text-gray-700">{{ milestoneLabel }}</span>
                                 <span class="text-sm text-gray-500">{{ milestonePercentage }}% of Total</span>
                             </div>
-                            
+
                             <!-- Amount Breakdown -->
                             <div class="space-y-3">
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-600">Base Amount</span>
                                     <span class="font-medium">{{ formatCurrencyWithDecimals(baseAmount) }}</span>
                                 </div>
-                                
+
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-600">GST @{{ GST_RATE }}%</span>
                                     <span class="font-medium text-orange-600">{{ formatCurrencyWithDecimals(gstAmount) }}</span>
                                 </div>
-                                
+
                                 <div class="border-t border-gray-200 pt-3 mt-3">
                                     <div class="flex justify-between items-center">
                                         <span class="text-xl font-bold text-gray-800">Total Payable</span>
@@ -236,7 +243,7 @@ const indianStates = [
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- GST Note -->
                             <p class="text-xs text-gray-500 mt-4">
                                 *GST will be shown in invoice. Amount includes GST.
@@ -247,16 +254,16 @@ const indianStates = [
                     <!-- Section 2: Buying Type -->
                     <div class="bg-white rounded-lg shadow p-6 mb-6">
                         <h2 class="text-xl font-bold text-gray-800 mb-4">🏢 Buying Type</h2>
-                        
+
                         <div class="space-y-4">
                             <!-- Individual Option -->
-                            <label 
+                            <label
                                 class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all"
                                 :class="buyingType === 'INDIVIDUAL' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'"
                             >
-                                <input 
-                                    type="radio" 
-                                    v-model="buyingType" 
+                                <input
+                                    type="radio"
+                                    v-model="buyingType"
                                     value="INDIVIDUAL"
                                     class="w-5 h-5 text-blue-600"
                                 >
@@ -265,15 +272,15 @@ const indianStates = [
                                     <span class="block text-sm text-gray-500">Personal purchase</span>
                                 </div>
                             </label>
-                            
+
                             <!-- Business Option -->
-                            <label 
+                            <label
                                 class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all"
                                 :class="buyingType === 'BUSINESS' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'"
                             >
-                                <input 
-                                    type="radio" 
-                                    v-model="buyingType" 
+                                <input
+                                    type="radio"
+                                    v-model="buyingType"
                                     value="BUSINESS"
                                     class="w-5 h-5 text-blue-600"
                                 >
@@ -283,15 +290,15 @@ const indianStates = [
                                 </div>
                             </label>
                         </div>
-                        
+
                         <!-- Business Fields (Conditional) -->
                         <div v-if="buyingType === 'BUSINESS'" class="mt-6 space-y-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">
                                     GSTIN <span class="text-red-500">*</span>
                                 </label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     v-model="gstin"
                                     @blur="validateGstin"
                                     placeholder="22AAAAA0000A1Z5"
@@ -302,31 +309,31 @@ const indianStates = [
                                 <p v-if="gstinError" class="text-red-500 text-sm mt-1">{{ gstinError }}</p>
                                 <p class="text-xs text-gray-500 mt-1">15-character GSTIN (e.g., 22AAAAA0000A1Z5)</p>
                             </div>
-                            
+
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     v-model="businessName"
                                     placeholder="Company Name"
                                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 >
                             </div>
-                            
+
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Business Address</label>
-                                <textarea 
+                                <textarea
                                     v-model="businessAddress"
                                     rows="2"
                                     placeholder="Full business address"
                                     class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 ></textarea>
                             </div>
-                            
+
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">State</label>
-                                    <select 
+                                    <select
                                         v-model="state"
                                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     >
@@ -336,8 +343,8 @@ const indianStates = [
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Pincode</label>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         v-model="pincode"
                                         placeholder="123456"
                                         maxlength="6"
@@ -351,16 +358,16 @@ const indianStates = [
                     <!-- Section 3: Payment Method -->
                     <div class="bg-white rounded-lg shadow p-6 mb-6">
                         <h2 class="text-xl font-bold text-gray-800 mb-4">💳 Select Payment Method</h2>
-                        
+
                         <div class="space-y-4">
                             <!-- Online Payment -->
-                            <label 
+                            <label
                                 class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all"
                                 :class="paymentMethod === 'ONLINE' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'"
                             >
-                                <input 
-                                    type="radio" 
-                                    v-model="paymentMethod" 
+                                <input
+                                    type="radio"
+                                    v-model="paymentMethod"
                                     value="ONLINE"
                                     class="w-5 h-5 text-green-600"
                                 >
@@ -372,15 +379,15 @@ const indianStates = [
                                     </div>
                                 </div>
                             </label>
-                            
+
                             <!-- Cash Payment -->
-                            <label 
+                            <label
                                 class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all"
                                 :class="paymentMethod === 'CASH' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'"
                             >
-                                <input 
-                                    type="radio" 
-                                    v-model="paymentMethod" 
+                                <input
+                                    type="radio"
+                                    v-model="paymentMethod"
                                     value="CASH"
                                     class="w-5 h-5 text-orange-600"
                                 >
@@ -393,7 +400,7 @@ const indianStates = [
                                 </div>
                             </label>
                         </div>
-                        
+
                         <!-- Cash Payment Notice -->
                         <div v-if="paymentMethod === 'CASH'" class="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
                             <p class="text-sm text-orange-800">
@@ -407,7 +414,7 @@ const indianStates = [
                 <div class="lg:col-span-1">
                     <div class="bg-white rounded-lg shadow p-6 sticky top-4">
                         <h3 class="text-lg font-bold text-gray-800 mb-4">💰 Payment Summary</h3>
-                        
+
                         <div class="space-y-3 mb-6">
                             <div class="flex justify-between text-sm">
                                 <span class="text-gray-600">Base Amount</span>
@@ -424,21 +431,21 @@ const indianStates = [
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Pay Button -->
                         <button
-                            @click="processPayment"
-                            :disabled="isProcessing || (buyingType === 'BUSINESS' && !validateGstin())"
+                            @click="saveBillingDetails"
+                            :disabled="isProcessing || isSavingBilling || (buyingType === 'BUSINESS' && !validateGstin())"
                             class="w-full h-14 text-white text-lg font-bold rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             :class="paymentMethod === 'ONLINE' ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500' : 'bg-orange-500 hover:bg-orange-600 focus:ring-orange-500'"
                         >
-                            <span v-if="isProcessing">Processing...</span>
+                            <span v-if="isProcessing || isSavingBilling">Processing...</span>
                             <span v-else>
                                 {{ paymentMethod === 'ONLINE' ? '🟢' : '💵' }}
                                 Pay {{ formatCurrencyWithDecimals(totalAmount) }}
                             </span>
                         </button>
-                        
+
                         <!-- Security Note -->
                         <p class="text-xs text-gray-500 text-center mt-4">
                             🔒 Secure payment powered by PaintUp

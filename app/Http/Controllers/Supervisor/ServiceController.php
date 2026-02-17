@@ -18,7 +18,7 @@ class ServiceController extends Controller
     {
         $projectRoom->load(['services']);
         $services = \App\Models\MasterService::all();
-        
+
         return Inertia::render('Supervisor/Zones/Service', [
             'zone' => $projectRoom,
             'services' => $services,
@@ -133,7 +133,7 @@ class ServiceController extends Controller
         $projectRoom->load(['services']);
         $services = \App\Models\MasterService::all();
         $quoteService->load(['masterService']);
-        
+
         return Inertia::render('Supervisor/Zones/Service', [
             'zone' => $projectRoom,
             'services' => $services,
@@ -156,6 +156,7 @@ class ServiceController extends Controller
             'breadth' => 'nullable|numeric|min:0',
             'count' => 'nullable|integer|min:1',
             'rate' => 'required|numeric|min:0',
+            'remarks' => 'nullable|string|max:1000',
         ]);
 
         // Update the service (photo_url removed - photos now uploaded via Project → Photos)
@@ -169,6 +170,7 @@ class ServiceController extends Controller
             'count' => $validated['count'] ?? null,
             'rate' => $validated['rate'],
             'amount' => $validated['amount'],
+            'remarks' => $validated['remarks'] ?? null,
             'photo_url' => null, // Photos now uploaded via Project → Photos
         ]);
 

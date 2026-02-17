@@ -346,12 +346,35 @@ const sendWhatsAppMessage = () => {
             <div class="p-6">
                 <div v-if="project.rooms && project.rooms.length > 0" class="space-y-4">
                     <div v-for="room in project.rooms" :key="room.id" class="border rounded-lg p-4">
-                        <div class="flex justify-between items-start">
+                        <div class="flex justify-between items-start mb-3">
                             <div>
                                 <h3 class="font-medium text-gray-800">{{ room.name }}</h3>
                                 <p class="text-sm text-gray-500">{{ room.type }}</p>
                             </div>
-                            <span class="font-bold text-gray-900">{{ formatCurrency(room.total_amount) }}</span>
+                            <span class="font-bold text-gray-900">{{ formatCurrency(room.total_amount || 0) }}</span>
+                        </div>
+
+                        <!-- Services -->
+                        <div v-if="room.services && room.services.length > 0" class="mt-3 space-y-2">
+                            <p class="text-xs font-semibold text-gray-600 uppercase">Services</p>
+                            <div v-for="service in room.services" :key="service.id" class="bg-orange-50 rounded p-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-700">{{ service.custom_name || service.master_service?.name || 'Service' }}</span>
+                                    <span class="font-medium">{{ formatCurrency(service.amount || 0) }}</span>
+                                </div>
+                                <p v-if="service.remarks" class="text-xs text-gray-500 mt-1">{{ service.remarks }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Items -->
+                        <div v-if="room.items && room.items.length > 0" class="mt-3 space-y-2">
+                            <p class="text-xs font-semibold text-gray-600 uppercase">Paint Items</p>
+                            <div v-for="item in room.items" :key="item.id" class="bg-blue-50 rounded p-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-700">{{ item.product?.name || 'Paint Item' }}</span>
+                                    <span class="font-medium">{{ formatCurrency(item.amount || 0) }}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

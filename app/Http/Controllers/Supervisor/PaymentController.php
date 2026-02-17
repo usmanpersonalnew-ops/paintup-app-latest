@@ -208,7 +208,26 @@ class PaymentController extends Controller
             $project->mid_status = 'PAID';
             $project->mid_paid_at = now();
             $project->mid_reference = 'MID-ONLINE-' . strtoupper(uniqid());
+            $project->final_status = 'PENDING';
             $project->save();
+
+            // Create or update milestone payment record
+            $milestoneData = $project->calculateMilestoneWithGst('mid');
+            \App\Models\MilestonePayment::updateOrCreate(
+                [
+                    'project_id' => $project->id,
+                    'milestone_name' => 'mid',
+                ],
+                [
+                    'base_amount' => $milestoneData['base_amount'],
+                    'gst_amount' => $milestoneData['gst_amount'],
+                    'total_amount' => $milestoneData['total_amount'],
+                    'payment_status' => \App\Models\MilestonePayment::STATUS_PAID,
+                    'payment_method' => \App\Models\MilestonePayment::METHOD_ONLINE,
+                    'payment_reference' => $project->mid_reference,
+                    'paid_at' => now(),
+                ]
+            );
 
             return response()->json([
                 'success' => true,
@@ -217,6 +236,22 @@ class PaymentController extends Controller
         } else {
             $project->mid_status = 'CASH_PENDING';
             $project->save();
+
+            // Create milestone payment record with CASH_PENDING status
+            $milestoneData = $project->calculateMilestoneWithGst('mid');
+            \App\Models\MilestonePayment::updateOrCreate(
+                [
+                    'project_id' => $project->id,
+                    'milestone_name' => 'mid',
+                ],
+                [
+                    'base_amount' => $milestoneData['base_amount'],
+                    'gst_amount' => $milestoneData['gst_amount'],
+                    'total_amount' => $milestoneData['total_amount'],
+                    'payment_status' => 'AWAITING_CONFIRMATION',
+                    'payment_method' => \App\Models\MilestonePayment::METHOD_CASH,
+                ]
+            );
 
             return response()->json([
                 'success' => true,

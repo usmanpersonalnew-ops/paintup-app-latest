@@ -191,9 +191,79 @@ class Project extends Model
      */
     public function isFullyPaid(): bool
     {
+        // First, try to sync milestone payments if they're missing or out of sync
+        $this->syncMilestonePayments();
+        
         return $this->milestonePayments()
             ->where('payment_status', MilestonePayment::STATUS_PAID)
             ->count() === 3;
+    }
+
+    /**
+     * Sync milestone payments with project payment statuses
+     * Creates missing milestone payments or updates existing ones
+     */
+    public function syncMilestonePayments(): void
+    {
+        // Sync booking milestone
+        if ($this->booking_status === 'PAID') {
+            $bookingData = $this->calculateMilestoneWithGst('booking');
+            MilestonePayment::updateOrCreate(
+                [
+                    'project_id' => $this->id,
+                    'milestone_name' => 'booking',
+                ],
+                [
+                    'base_amount' => $bookingData['base_amount'],
+                    'gst_amount' => $bookingData['gst_amount'],
+                    'total_amount' => $bookingData['total_amount'],
+                    'payment_status' => MilestonePayment::STATUS_PAID,
+                    'payment_method' => $this->payment_method === 'ONLINE' ? MilestonePayment::METHOD_ONLINE : MilestonePayment::METHOD_CASH,
+                    'payment_reference' => $this->booking_reference ?? 'SYNCED',
+                    'paid_at' => $this->booking_paid_at ?? now(),
+                ]
+            );
+        }
+
+        // Sync mid milestone
+        if ($this->mid_status === 'PAID') {
+            $midData = $this->calculateMilestoneWithGst('mid');
+            MilestonePayment::updateOrCreate(
+                [
+                    'project_id' => $this->id,
+                    'milestone_name' => 'mid',
+                ],
+                [
+                    'base_amount' => $midData['base_amount'],
+                    'gst_amount' => $midData['gst_amount'],
+                    'total_amount' => $midData['total_amount'],
+                    'payment_status' => MilestonePayment::STATUS_PAID,
+                    'payment_method' => $this->payment_method === 'ONLINE' ? MilestonePayment::METHOD_ONLINE : MilestonePayment::METHOD_CASH,
+                    'payment_reference' => $this->mid_reference ?? 'SYNCED',
+                    'paid_at' => $this->mid_paid_at ?? now(),
+                ]
+            );
+        }
+
+        // Sync final milestone
+        if ($this->final_status === 'PAID') {
+            $finalData = $this->calculateMilestoneWithGst('final');
+            MilestonePayment::updateOrCreate(
+                [
+                    'project_id' => $this->id,
+                    'milestone_name' => 'final',
+                ],
+                [
+                    'base_amount' => $finalData['base_amount'],
+                    'gst_amount' => $finalData['gst_amount'],
+                    'total_amount' => $finalData['total_amount'],
+                    'payment_status' => MilestonePayment::STATUS_PAID,
+                    'payment_method' => $this->payment_method === 'ONLINE' ? MilestonePayment::METHOD_ONLINE : MilestonePayment::METHOD_CASH,
+                    'payment_reference' => $this->final_reference ?? 'SYNCED',
+                    'paid_at' => $this->final_paid_at ?? now(),
+                ]
+            );
+        }
     }
 
     /**

@@ -16,33 +16,59 @@ class LeadController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        // Log incoming request for debugging
+        Log::info('Lead submission received', [
+            'data' => $request->all(),
+            'headers' => $request->headers->all()
+        ]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
             'email' => 'nullable|email|max:255',
             'pincode' => 'nullable|string|max:10',
-            'whatsapp_update' => 'nullable|string|in:Yes,No',
+            'whatsapp_enabled' => 'nullable|boolean',
+            'whatsapp_update' => 'nullable|string|in:Yes,No', // Legacy support
             'construction_ongoing' => 'nullable|string|in:Yes,No',
             'property_type' => 'nullable|string|max:100',
             'visit_date' => 'nullable|date',
         ]);
 
-        // Convert whatsapp_update "Yes"/"No" to boolean
-        $whatsappEnabled = strtolower($validated['whatsapp_update'] ?? 'No') === 'yes';
+        // Handle whatsapp_enabled (boolean) or whatsapp_update (Yes/No string)
+        $whatsappEnabled = false;
+        if (isset($validated['whatsapp_enabled'])) {
+            $whatsappEnabled = (bool) $validated['whatsapp_enabled'];
+        } elseif (isset($validated['whatsapp_update'])) {
+            $whatsappEnabled = strtolower($validated['whatsapp_update']) === 'yes';
+        }
 
         // Create inquiry
-        $inquiry = Inquiry::create([
-            'name' => $validated['name'],
-            'phone' => $validated['phone'],
-            'email' => $validated['email'] ?? null,
-            'pincode' => $validated['pincode'] ?? null,
-            'whatsapp_enabled' => $whatsappEnabled,
-            'construction_ongoing' => $validated['construction_ongoing'] ?? null,
-            'property_type' => $validated['property_type'] ?? null,
-            'visit_date' => $validated['visit_date'] ?? null,
-            'source' => 'Website',
-            'status' => Inquiry::STATUS_NEW,
-        ]);
+        try {
+            $inquiry = Inquiry::create([
+                'name' => $validated['name'],
+                'phone' => $validated['phone'],
+                'email' => $validated['email'] ?? null,
+                'pincode' => $validated['pincode'] ?? null,
+                'whatsapp_enabled' => $whatsappEnabled,
+                'construction_ongoing' => $validated['construction_ongoing'] ?? null,
+                'property_type' => $validated['property_type'] ?? null,
+                'visit_date' => $validated['visit_date'] ?? null,
+                'source' => 'Website',
+                'status' => Inquiry::STATUS_NEW,
+            ]);
+
+            Log::info('Lead/inquiry created successfully', [
+                'inquiry_id' => $inquiry->id,
+                'name' => $inquiry->name,
+                'phone' => $inquiry->phone
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to create inquiry', [
+                'error' => $e->getMessage(),
+                'data' => $validated
+            ]);
+            throw $e;
+        }
 
         // Send WhatsApp message if enabled
         if ($whatsappEnabled) {

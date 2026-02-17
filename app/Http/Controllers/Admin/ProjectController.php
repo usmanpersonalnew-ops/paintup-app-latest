@@ -110,7 +110,21 @@ class ProjectController extends Controller
      */
     public function show($id)
     {
-        $project = Project::with(['rooms.items', 'rooms.services', 'coupon'])->findOrFail($id);
+        $project = Project::with(['rooms.items.product', 'rooms.items.surface', 'rooms.items.system', 'rooms.services.masterService', 'coupon'])->findOrFail($id);
+
+        // Calculate room totals if not already set
+        foreach ($project->rooms as $room) {
+            if (!$room->total_amount || $room->total_amount == 0) {
+                $roomTotal = 0;
+                foreach ($room->items as $item) {
+                    $roomTotal += $item->amount ?? 0;
+                }
+                foreach ($room->services as $service) {
+                    $roomTotal += $service->amount ?? 0;
+                }
+                $room->total_amount = $roomTotal;
+            }
+        }
 
         // Calculate milestone totals (base + GST) for display
         $bookingTotal = ($project->booking_amount ?? 0) + ($project->booking_gst ?? 0);
@@ -156,7 +170,7 @@ class ProjectController extends Controller
             'phone' => 'required|string|max:20',
             'location' => 'required|string|max:500',
             'total_amount' => 'nullable|numeric',
-            'status' => 'nullable|string|in:DRAFT,AWAITING_CASH_CONFIRMATION,CONFIRMED,IN_PROGRESS,COMPLETED',
+            'status' => 'required|string|in:NEW,PENDING,ACCEPTED,IN_PROGRESS,REJECTED,COMPLETED,DRAFT,AWAITING_CASH_CONFIRMATION,CONFIRMED',
             'supervisor_id' => 'nullable|integer|exists:users,id',
             'home_visit_date' => 'nullable|date',
             'home_visit_time' => 'nullable|string',
@@ -189,7 +203,7 @@ class ProjectController extends Controller
             'booking_amount' => $milestones['booking_amount'],
             'mid_payment_amount' => $milestones['mid_payment_amount'],
             'final_payment_amount' => $milestones['final_payment_amount'],
-            'status' => $validated['status'] ?? $project->status,
+            'status' => $validated['status'],
             'supervisor_id' => $validated['supervisor_id'] ?? $project->supervisor_id,
             'home_visit_date' => $validated['home_visit_date'] ?? $project->home_visit_date,
             'home_visit_time' => $validated['home_visit_time'] ?? $project->home_visit_time,

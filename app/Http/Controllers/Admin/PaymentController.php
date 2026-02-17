@@ -207,6 +207,24 @@ class PaymentController extends Controller
         $project->mid_status = 'PENDING';
         $project->save();
 
+        // Create or update milestone payment record
+        $milestoneData = $project->calculateMilestoneWithGst('booking');
+        \App\Models\MilestonePayment::updateOrCreate(
+            [
+                'project_id' => $project->id,
+                'milestone_name' => 'booking',
+            ],
+            [
+                'base_amount' => $milestoneData['base_amount'],
+                'gst_amount' => $milestoneData['gst_amount'],
+                'total_amount' => $milestoneData['total_amount'],
+                'payment_status' => \App\Models\MilestonePayment::STATUS_PAID,
+                'payment_method' => \App\Models\MilestonePayment::METHOD_CASH,
+                'payment_reference' => $project->booking_reference,
+                'paid_at' => now(),
+            ]
+        );
+
         return response()->json([
             'success' => true,
             'message' => 'Booking marked as PAID manually',
@@ -223,25 +241,34 @@ class PaymentController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized - Admin only'], 403);
         }
 
-            $project->mid_status = 'PAID';
-            $project->mid_paid_at = now();
-            $project->mid_reference = 'ADMIN-MANUAL-' . strtoupper(uniqid());
-            $project->final_status = 'PENDING';
-            $project->save();
+        $project->mid_status = 'PAID';
+        $project->mid_paid_at = now();
+        $project->mid_reference = 'ADMIN-MANUAL-' . strtoupper(uniqid());
+        $project->final_status = 'PENDING';
+        $project->save();
 
-            // Update milestone payment record
-            \App\Models\MilestonePayment::where('project_id', $project->id)
-                ->where('milestone_name', 'mid')
-                ->whereIn('payment_status', ['AWAITING_CONFIRMATION', 'PENDING'])
-                ->update([
-                    'payment_status' => \App\Models\MilestonePayment::STATUS_PAID,
-                    'paid_at' => now(),
-                ]);
+        // Create or update milestone payment record
+        $milestoneData = $project->calculateMilestoneWithGst('mid');
+        \App\Models\MilestonePayment::updateOrCreate(
+            [
+                'project_id' => $project->id,
+                'milestone_name' => 'mid',
+            ],
+            [
+                'base_amount' => $milestoneData['base_amount'],
+                'gst_amount' => $milestoneData['gst_amount'],
+                'total_amount' => $milestoneData['total_amount'],
+                'payment_status' => \App\Models\MilestonePayment::STATUS_PAID,
+                'payment_method' => \App\Models\MilestonePayment::METHOD_CASH,
+                'payment_reference' => $project->mid_reference,
+                'paid_at' => now(),
+            ]
+        );
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Mid payment marked as PAID manually',
-            ]);
+        return response()->json([
+            'success' => true,
+            'message' => 'Mid payment marked as PAID manually',
+        ]);
     }
 
     /**
@@ -254,25 +281,34 @@ class PaymentController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized - Admin only'], 403);
         }
 
-            $project->final_status = 'PAID';
-            $project->final_paid_at = now();
-            $project->final_reference = 'ADMIN-MANUAL-' . strtoupper(uniqid());
-            $project->status = 'COMPLETED';
-            $project->save();
+        $project->final_status = 'PAID';
+        $project->final_paid_at = now();
+        $project->final_reference = 'ADMIN-MANUAL-' . strtoupper(uniqid());
+        $project->status = 'COMPLETED';
+        $project->save();
 
-            // Update milestone payment record
-            \App\Models\MilestonePayment::where('project_id', $project->id)
-                ->where('milestone_name', 'final')
-                ->whereIn('payment_status', ['AWAITING_CONFIRMATION', 'PENDING'])
-                ->update([
-                    'payment_status' => \App\Models\MilestonePayment::STATUS_PAID,
-                    'paid_at' => now(),
-                ]);
+        // Create or update milestone payment record
+        $milestoneData = $project->calculateMilestoneWithGst('final');
+        \App\Models\MilestonePayment::updateOrCreate(
+            [
+                'project_id' => $project->id,
+                'milestone_name' => 'final',
+            ],
+            [
+                'base_amount' => $milestoneData['base_amount'],
+                'gst_amount' => $milestoneData['gst_amount'],
+                'total_amount' => $milestoneData['total_amount'],
+                'payment_status' => \App\Models\MilestonePayment::STATUS_PAID,
+                'payment_method' => \App\Models\MilestonePayment::METHOD_CASH,
+                'payment_reference' => $project->final_reference,
+                'paid_at' => now(),
+            ]
+        );
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Final payment marked as PAID manually. Project completed!',
-            ]);
+        return response()->json([
+            'success' => true,
+            'message' => 'Final payment marked as PAID manually. Project completed!',
+        ]);
     }
 
     /**
