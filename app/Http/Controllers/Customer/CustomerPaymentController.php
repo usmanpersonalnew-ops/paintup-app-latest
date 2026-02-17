@@ -211,7 +211,42 @@ class CustomerPaymentController extends Controller
     {
         $request->validate([
             'payment_method' => 'required|in:ONLINE,CASH',
+            'billing_details' => 'nullable|array',
+            'billing_details.buying_type' => 'nullable|in:INDIVIDUAL,BUSINESS',
+            'billing_details.gstin' => 'nullable|string|size:15',
+            'billing_details.business_name' => 'nullable|string|max:255',
+            'billing_details.business_address' => 'nullable|string',
+            'billing_details.state' => 'nullable|string|max:100',
+            'billing_details.pincode' => 'nullable|string|size:6',
         ]);
+
+        // Save billing details if provided
+        if ($request->has('billing_details') && !empty($request->billing_details)) {
+            $billingData = $request->billing_details;
+            if (!empty($billingData['buying_type'])) {
+                // Validate GSTIN format if provided
+                if (!empty($billingData['gstin'])) {
+                    if (!BillingDetail::validateGstin($billingData['gstin'])) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Invalid GSTIN format',
+                        ], 422);
+                    }
+                }
+
+                BillingDetail::updateOrCreate(
+                    ['project_id' => $project->id, 'milestone_type' => 'mid'],
+                    [
+                        'buying_type' => $billingData['buying_type'],
+                        'gstin' => $billingData['gstin'] ?? null,
+                        'business_name' => $billingData['business_name'] ?? null,
+                        'business_address' => $billingData['business_address'] ?? null,
+                        'state' => $billingData['state'] ?? null,
+                        'pincode' => $billingData['pincode'] ?? null,
+                    ]
+                );
+            }
+        }
 
         // Recalculate totals if base_total is missing or zero
         if (empty($project->base_total) || $project->base_total == 0) {
@@ -220,12 +255,11 @@ class CustomerPaymentController extends Controller
             $project->refresh();
         }
 
-        $baseTotal = $project->base_total ?? $project->total_amount ?? 0;
-        $gstRate = $project->getGstRate();
-
-        $midBase = round($baseTotal * 0.40, 2);
-        $midGst = round($midBase * ($gstRate / 100), 2);
-        $midTotal = $midBase + $midGst;
+        // Use the project's calculateMilestoneWithGst method for consistency
+        $milestoneData = $project->calculateMilestoneWithGst('mid');
+        $midBase = $milestoneData['base_amount'];
+        $midGst = $milestoneData['gst_amount'];
+        $midTotal = $milestoneData['total_amount'];
 
         if ($request->payment_method === 'ONLINE') {
             // Check if CCAvenue is enabled
@@ -279,7 +313,7 @@ class CustomerPaymentController extends Controller
                 'message' => 'Redirecting to payment gateway...',
             ]);
         } else {
-            DB::transaction(function () use ($project, $midBase, $midGst, $midTotal, $gstRate) {
+            DB::transaction(function () use ($project, $midBase, $midGst, $midTotal) {
                 MilestonePayment::create([
                     'project_id' => $project->id,
                     'milestone_name' => 'mid',
@@ -313,7 +347,42 @@ class CustomerPaymentController extends Controller
     {
         $request->validate([
             'payment_method' => 'required|in:ONLINE,CASH',
+            'billing_details' => 'nullable|array',
+            'billing_details.buying_type' => 'nullable|in:INDIVIDUAL,BUSINESS',
+            'billing_details.gstin' => 'nullable|string|size:15',
+            'billing_details.business_name' => 'nullable|string|max:255',
+            'billing_details.business_address' => 'nullable|string',
+            'billing_details.state' => 'nullable|string|max:100',
+            'billing_details.pincode' => 'nullable|string|size:6',
         ]);
+
+        // Save billing details if provided
+        if ($request->has('billing_details') && !empty($request->billing_details)) {
+            $billingData = $request->billing_details;
+            if (!empty($billingData['buying_type'])) {
+                // For BUSINESS type, GSTIN is required
+                if ($billingData['buying_type'] === 'BUSINESS') {
+                    if (empty($billingData['gstin']) || !BillingDetail::validateGstin($billingData['gstin'])) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Valid GSTIN is required for business purchases',
+                        ], 422);
+                    }
+                }
+
+                BillingDetail::updateOrCreate(
+                    ['project_id' => $project->id, 'milestone_type' => 'final'],
+                    [
+                        'buying_type' => $billingData['buying_type'],
+                        'gstin' => $billingData['gstin'] ?? null,
+                        'business_name' => $billingData['business_name'] ?? null,
+                        'business_address' => $billingData['business_address'] ?? null,
+                        'state' => $billingData['state'] ?? null,
+                        'pincode' => $billingData['pincode'] ?? null,
+                    ]
+                );
+            }
+        }
 
         // Recalculate totals if base_total is missing or zero
         if (empty($project->base_total) || $project->base_total == 0) {
@@ -322,12 +391,11 @@ class CustomerPaymentController extends Controller
             $project->refresh();
         }
 
-        $baseTotal = $project->base_total ?? $project->total_amount ?? 0;
-        $gstRate = $project->getGstRate();
-
-        $finalBase = round($baseTotal * 0.20, 2);
-        $finalGst = round($finalBase * ($gstRate / 100), 2);
-        $finalTotal = $finalBase + $finalGst;
+        // Use the project's calculateMilestoneWithGst method for consistency
+        $milestoneData = $project->calculateMilestoneWithGst('final');
+        $finalBase = $milestoneData['base_amount'];
+        $finalGst = $milestoneData['gst_amount'];
+        $finalTotal = $milestoneData['total_amount'];
 
         if ($request->payment_method === 'ONLINE') {
             // Check if CCAvenue is enabled
@@ -381,7 +449,7 @@ class CustomerPaymentController extends Controller
                 'message' => 'Redirecting to payment gateway...',
             ]);
         } else {
-            DB::transaction(function () use ($project, $finalBase, $finalGst, $finalTotal, $gstRate) {
+            DB::transaction(function () use ($project, $finalBase, $finalGst, $finalTotal) {
                 MilestonePayment::create([
                     'project_id' => $project->id,
                     'milestone_name' => 'final',

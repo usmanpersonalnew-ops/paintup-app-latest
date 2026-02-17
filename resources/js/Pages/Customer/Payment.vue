@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import { usePage, router } from '@inertiajs/vue3';
 import CustomerLayout from '@/Layouts/CustomerLayout.vue';
 import axios from 'axios';
@@ -89,6 +89,10 @@ const totalAmount = computed(() => props.milestone?.total_amount || 0);
 const validateGstin = () => {
     gstinError.value = '';
     if (buyingType.value === 'BUSINESS') {
+        if (!gstin.value || gstin.value.trim() === '') {
+            gstinError.value = 'GSTIN is required for business purchases';
+            return false;
+        }
         const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
         if (!gstinRegex.test(gstin.value)) {
             gstinError.value = 'Invalid GSTIN format. Expected format: 22AAAAA0000A1Z5';
@@ -97,6 +101,14 @@ const validateGstin = () => {
     }
     return true;
 };
+
+// Computed property to check if form is valid
+const isFormValid = computed(() => {
+    if (buyingType.value === 'BUSINESS') {
+        return validateGstin();
+    }
+    return true;
+});
 
 // Save billing details (only if business type)
 const saveBillingDetails = async () => {
@@ -435,7 +447,7 @@ const indianStates = [
                         <!-- Pay Button -->
                         <button
                             @click="saveBillingDetails"
-                            :disabled="isProcessing || isSavingBilling || (buyingType === 'BUSINESS' && !validateGstin())"
+                            :disabled="isProcessing || isSavingBilling || !isFormValid"
                             class="w-full h-14 text-white text-lg font-bold rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             :class="paymentMethod === 'ONLINE' ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500' : 'bg-orange-500 hover:bg-orange-600 focus:ring-orange-500'"
                         >
