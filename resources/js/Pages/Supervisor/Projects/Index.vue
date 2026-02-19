@@ -26,17 +26,17 @@ const hasCashPendingConfirmation = (project) => {
 const markCashReceived = async (project, e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (!confirm(`Mark cash received for ${project.client_name}'s booking payment of ₹${formatCurrency(project.booking_amount || 0)}?`)) {
         return;
     }
-    
+
     try {
         const response = await axios.post(`/supervisor/projects/${project.id}/confirm-cash-booking`);
-        
+
         if (response.data.success) {
             // Refresh the page to show updated status
-            router.visit(route('supervisor.projects.index'));
+            router.reload();
         } else {
             alert(response.data.message || 'Failed to confirm cash payment');
         }
@@ -138,7 +138,7 @@ const getPaymentBadge = (project) => {
                     </svg>
                     {{ project.phone }}
                 </div>
-                
+
                 <!-- Payment Info -->
                 <div class="mt-2 flex items-center gap-2">
                     <span
@@ -151,12 +151,12 @@ const getPaymentBadge = (project) => {
                         {{ project.payment_method === 'ONLINE' ? '🟢 Online' : '💵 Cash' }}
                     </span>
                 </div>
-                
+
                 <!-- Cash Confirmation Info -->
                 <div v-if="project.cash_confirmed_by" class="mt-1 text-xs text-green-600">
                     ✓ Cash confirmed by supervisor
                 </div>
-                
+
                 <!-- Mark Cash Received Button -->
                 <div v-if="hasCashPendingConfirmation(project)" class="mt-2">
                     <button

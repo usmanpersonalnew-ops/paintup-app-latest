@@ -103,9 +103,9 @@ watch(selectedService, (newService) => {
         form.custom_name = newService.name || '';
         // Auto-populate remarks from master service ONLY if remarks field is empty
         // This allows supervisor to override remarks without them being overwritten
-        if (!form.remarks || form.remarks.trim() === '') {
+        // if (!form.remarks || form.remarks.trim() === '') {
             form.remarks = newService.remarks || '';
-        }
+        // }
     }
 });
 

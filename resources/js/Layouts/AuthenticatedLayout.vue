@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
@@ -12,6 +12,24 @@ const branding = page.props.branding || {};
 const companyName = branding.company_name || 'PaintUp';
 const logoUrl = branding.logo_url;
 const showingNavigationDropdown = ref(false);
+
+// Get user role and determine profile route URL
+const user = page.props.auth?.user;
+const userRole = user?.role || '';
+const profileUrl = computed(() => {
+    try {
+        // Always return a valid route URL
+        if (userRole === 'ADMIN') {
+            return route('admin.profile.edit');
+        }
+        // Default to profile.edit for supervisors and other users
+        return route('profile.edit');
+    } catch (error) {
+        console.error('Error generating profile route:', error);
+        // Fallback to default profile route
+        return route('profile.edit');
+    }
+});
 </script>
 
 <template>
@@ -83,7 +101,7 @@ const showingNavigationDropdown = ref(false);
 
                                     <template #content>
                                         <DropdownLink
-                                            :href="route('profile.edit')"
+                                            :href="profileUrl"
                                         >
                                             Profile
                                         </DropdownLink>
@@ -175,7 +193,7 @@ const showingNavigationDropdown = ref(false);
                         </div>
 
                         <div class="mt-3 space-y-1">
-                            <ResponsiveNavLink :href="route('profile.edit')">
+                            <ResponsiveNavLink :href="profileUrl">
                                 Profile
                             </ResponsiveNavLink>
                             <ResponsiveNavLink

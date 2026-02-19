@@ -168,7 +168,8 @@ const confirmCashBooking = async () => {
         const res = await axios.post(`/supervisor/projects/${props.project.id}/confirm-cash-booking`, {});
 
         if (res.data.success) {
-            window.location.reload();
+            // Use Inertia router to reload with fresh data
+            router.reload({ only: ['project'] });
         } else {
             alert(res.data.message || 'Failed to confirm cash payment');
         }
@@ -188,7 +189,8 @@ const confirmCashPayment = (milestone) => {
     form.post(route('supervisor.projects.confirm-cash', props.project.id), {
         data: { milestone },
         onSuccess: () => {
-            window.location.reload();
+            // Use Inertia router to reload with fresh data
+            router.reload({ only: ['project'] });
         },
         onFinish: () => {
             processingCashConfirm.value = false;

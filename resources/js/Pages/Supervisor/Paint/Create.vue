@@ -61,7 +61,7 @@ onMounted(() => {
         form.color = item.color_code || '';
         form.description = item.description || '';
         form.manual_deduction_sqft = item.manual_deduction_sqft || 0;
-        
+
         // Parse deductions if stored as JSON string
         if (item.deductions) {
             try {
@@ -72,7 +72,7 @@ onMounted(() => {
                 form.deductions = [];
             }
         }
-        
+
         // Set tier based on product
         if (item.product) {
             form.selected_tier = item.product.tier || '';
@@ -100,9 +100,30 @@ const tierOptions = [
     { value: 'LUXURY', label: 'Luxury' },
 ];
 
+// Computed: Filtered Surfaces (by zone type)
+const filteredSurfaces = computed(() => {
+    if (!props.surfaces || !props.zone) return [];
+
+    const zoneType = props.zone.type || 'INTERIOR';
+
+    // Filter surfaces based on zone type
+    return props.surfaces.filter(surface => {
+        // If zone is INTERIOR, show INTERIOR and BOTH surfaces
+        if (zoneType === 'INTERIOR') {
+            return surface.category === 'INTERIOR' || surface.category === 'BOTH';
+        }
+        // If zone is EXTERIOR, show EXTERIOR and BOTH surfaces
+        if (zoneType === 'EXTERIOR') {
+            return surface.category === 'EXTERIOR' || surface.category === 'BOTH';
+        }
+        // Default: show all surfaces
+        return true;
+    });
+});
+
 // Computed: Selected Surface
 const selectedSurface = computed(() => {
-    return props.surfaces?.find(s => s.id === Number(selectedSurfaceId.value));
+    return filteredSurfaces.value?.find(s => s.id === Number(selectedSurfaceId.value));
 });
 
 // Computed: Filtered Products (by tier)
@@ -120,22 +141,22 @@ const selectedProduct = computed(() =>
 );
 
 // Computed: Available Systems (from selected product)
-const availableSystems = computed(() => 
+const availableSystems = computed(() =>
     selectedProduct.value?.systems || []
 );
 
 // Computed: Selected System
-const selectedSystem = computed(() => 
+const selectedSystem = computed(() =>
     availableSystems.value.find(s => s.id === form.system_id)
 );
 
 // Computed: Room Default Area (for AREA surfaces)
 const roomDefaultArea = computed(() => {
     if (!props.zone) return 0;
-    const length = props.zone.length || 0;
-    const breadth = props.zone.breadth || 0;
-    const height = props.zone.height || 0;
-    
+    const length = Number(props.zone.length) || 0;
+    const breadth = Number(props.zone.breadth) || 0;
+    const height = Number(props.zone.height) || 0;
+
     // Wall area: perimeter × height = 2 × (L + W) × H
     if (length > 0 && breadth > 0 && height > 0) {
         return 2 * (length + breadth) * height;
@@ -150,12 +171,14 @@ const roomDefaultArea = computed(() => {
 // Computed: Gross Quantity
 const grossQty = computed(() => {
     if (!selectedSurface.value) return 0;
-    
+
     if (form.measurement_source === 'ROOM_DEFAULT') {
         if (selectedSurface.value.unit_type === 'AREA') {
-            return roomDefaultArea.value;
+            const area = roomDefaultArea.value;
+            return isNaN(area) ? 0 : area;
         } else if (selectedSurface.value.unit_type === 'LINEAR') {
-            return props.zone?.length || 0;
+            const length = Number(props.zone?.length) || 0;
+            return isNaN(length) ? 0 : length;
         } else if (selectedSurface.value.unit_type === 'COUNT') {
             return 1;
         } else {
@@ -165,13 +188,19 @@ const grossQty = computed(() => {
         // MANUAL mode
         if (selectedSurface.value.unit_type === 'AREA') {
             if (form.manual_area_mode === 'DIRECT') {
-                return form.direct_area || 0;
+                const area = Number(form.direct_area) || 0;
+                return isNaN(area) ? 0 : area;
             }
-            return (form.length || 0) * (form.height || 0);
+            const length = Number(form.length) || 0;
+            const height = Number(form.height) || 0;
+            const result = length * height;
+            return isNaN(result) ? 0 : result;
         } else if (selectedSurface.value.unit_type === 'LINEAR') {
-            return form.length || 0;
+            const length = Number(form.length) || 0;
+            return isNaN(length) ? 0 : length;
         } else if (selectedSurface.value.unit_type === 'COUNT') {
-            return form.quantity || 1;
+            const qty = Number(form.quantity) || 1;
+            return isNaN(qty) ? 1 : qty;
         } else {
             return 1; // LUMPSUM
         }
@@ -180,39 +209,50 @@ const grossQty = computed(() => {
 
 // Computed: Total Deductions Area (helper + manual)
 const totalDeductions = computed(() => {
-    const helperDeductions = form.deductions.reduce((sum, d) => sum + (d.area || 0), 0);
-    const manualDeduction = form.manual_deduction_sqft || 0;
-    return helperDeductions + manualDeduction;
+    const helperDeductions = form.deductions.reduce((sum, d) => {
+        const area = Number(d.area) || 0;
+        return sum + (isNaN(area) ? 0 : area);
+    }, 0);
+    const manualDeduction = Number(form.manual_deduction_sqft) || 0;
+    const result = helperDeductions + (isNaN(manualDeduction) ? 0 : manualDeduction);
+    return isNaN(result) ? 0 : result;
 });
 
 // Computed: Net Quantity
 const netQty = computed(() => {
-    return Math.max(0, grossQty.value - totalDeductions.value);
+    const gross = grossQty.value;
+    const deductions = totalDeductions.value;
+    const result = Math.max(0, gross - deductions);
+    return isNaN(result) ? 0 : result;
 });
 
 // Computed: Calculated Amount
 const calculatedAmount = computed(() => {
     if (form.pricing_mode === 'LUMPSUM') {
-        return form.lumpsum_amount || 0;
+        const amount = Number(form.lumpsum_amount) || 0;
+        return isNaN(amount) ? 0 : amount;
     }
     if (selectedSurface.value?.unit_type === 'LUMPSUM') {
-        return form.lumpsum_amount || 0;
+        const amount = Number(form.lumpsum_amount) || 0;
+        return isNaN(amount) ? 0 : amount;
     }
-    const rate = selectedSystem.value?.base_rate || 0;
-    return netQty.value * rate;
+    const rate = Number(selectedSystem.value?.base_rate) || 0;
+    const qty = netQty.value;
+    const result = qty * rate;
+    return isNaN(result) ? 0 : result;
 });
 
 // Computed: Show Manual Area Input
 const showManualAreaInput = computed(() => {
-    return selectedSurface.value?.unit_type === 'AREA' && 
-           form.measurement_source === 'MANUAL' && 
+    return selectedSurface.value?.unit_type === 'AREA' &&
+           form.measurement_source === 'MANUAL' &&
            form.manual_area_mode === 'DIRECT';
 });
 
 // Computed: Show Dimensions Input
 const showDimensionsInput = computed(() => {
     if (selectedSurface.value?.unit_type !== 'AREA') return false;
-    
+
     if (form.measurement_source === 'ROOM_DEFAULT') {
         return true; // Show room dimensions info
     }
@@ -279,7 +319,7 @@ const submit = () => {
         // Description
         description: form.description || null,
     };
-    
+
     if (isEditMode.value) {
         // Update existing item
         form.transform(() => data).put(route('supervisor.zones.paint.update', [props.zone.id, props.editItem.id]));
@@ -314,10 +354,13 @@ const submit = () => {
         <div v-if="!surfaces || surfaces.length === 0" class="p-4 bg-red-100 text-red-700 rounded">
             ⚠️ Master Data Missing. Please add Surfaces/Products in Admin.
         </div>
+        <div v-else-if="filteredSurfaces.length === 0" class="p-4 bg-orange-100 text-orange-700 rounded">
+            ⚠️ No surfaces available for {{ zone?.type || 'INTERIOR' }} rooms. Please add surfaces in Admin.
+        </div>
 
         <!-- Form -->
-        <form v-else @submit.prevent="submit" class="space-y-4">
-            
+        <form v-else-if="filteredSurfaces.length > 0" @submit.prevent="submit" class="space-y-4">
+
             <!-- 1) SURFACE SELECTION -->
             <div class="bg-white p-4 rounded shadow">
                 <label class="text-xs font-bold text-gray-500 uppercase">1. SURFACE</label>
@@ -326,7 +369,7 @@ const submit = () => {
                     class="w-full border border-gray-300 rounded p-3 h-12 mt-1 bg-white"
                 >
                     <option value="">Select Surface...</option>
-                    <option v-for="s in props.surfaces" :key="s.id" :value="s.id">
+                    <option v-for="s in filteredSurfaces" :key="s.id" :value="s.id">
                         {{ s.name }} ({{ s.unit_type }})
                     </option>
                 </select>
@@ -336,15 +379,15 @@ const submit = () => {
             <div v-if="selectedSurfaceId" class="bg-white p-4 rounded shadow">
                 <label class="text-xs font-bold text-gray-500 uppercase">2. PRODUCT FILTER</label>
                 <div class="flex gap-2 mt-2">
-                    <button 
+                    <button
                         type="button"
-                        v-for="tier in tierOptions" 
+                        v-for="tier in tierOptions"
                         :key="tier.value"
                         @click="form.selected_tier = tier.value"
                         :class="[
                             'px-3 py-2 rounded text-sm font-medium h-10 flex-1',
-                            form.selected_tier === tier.value 
-                                ? 'bg-blue-600 text-white' 
+                            form.selected_tier === tier.value
+                                ? 'bg-blue-600 text-white'
                                 : 'bg-gray-100 text-gray-600'
                         ]"
                     >
@@ -398,22 +441,22 @@ const submit = () => {
             <!-- 5) MEASUREMENTS (shown after system selected) -->
             <div v-if="form.system_id" class="bg-white p-4 rounded shadow">
                 <h3 class="font-bold border-b pb-2 mb-3">5. MEASUREMENTS</h3>
-                
+
                 <!-- Measurement Source Toggle -->
                 <div class="flex gap-4 mb-4">
                     <label class="flex items-center gap-2 cursor-pointer">
-                        <input 
-                            type="radio" 
-                            v-model="form.measurement_source" 
+                        <input
+                            type="radio"
+                            v-model="form.measurement_source"
                             value="ROOM_DEFAULT"
                             class="w-4 h-4 text-blue-600"
                         />
                         <span class="text-sm font-medium">Use Room Default</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer">
-                        <input 
-                            type="radio" 
-                            v-model="form.measurement_source" 
+                        <input
+                            type="radio"
+                            v-model="form.measurement_source"
                             value="MANUAL"
                             class="w-4 h-4 text-blue-600"
                         />
@@ -426,10 +469,10 @@ const submit = () => {
                     <!-- Room Default Info -->
                     <div v-if="form.measurement_source === 'ROOM_DEFAULT'" class="bg-blue-50 p-3 rounded">
                         <p class="text-sm text-blue-800">
-                            <span class="font-bold">Room Default:</span> 
-                            {{ roomDefaultArea.toFixed(2) }} sqft
+                            <span class="font-bold">Room Default:</span>
+                            {{ (isNaN(roomDefaultArea) ? 0 : roomDefaultArea).toFixed(2) }} sqft
                             <span v-if="zone?.length && zone?.height" class="text-blue-600 text-xs ml-2">
-                                (2 × ({{ zone.length }}' + {{ zone.breadth || 0 }}') × {{ zone.height }}'h)
+                                (2 × ({{ Number(zone.length) || 0 }}' + {{ Number(zone.breadth) || 0 }}') × {{ Number(zone.height) || 0 }}'h)
                             </span>
                         </p>
                     </div>
@@ -437,18 +480,18 @@ const submit = () => {
                     <!-- Manual Area Mode Toggle -->
                     <div v-if="form.measurement_source === 'MANUAL'" class="flex gap-4 mb-3">
                         <label class="flex items-center gap-2 cursor-pointer">
-                            <input 
-                                type="radio" 
-                                v-model="form.manual_area_mode" 
+                            <input
+                                type="radio"
+                                v-model="form.manual_area_mode"
                                 value="DIMENSIONS"
                                 class="w-4 h-4 text-blue-600"
                             />
                             <span class="text-sm">Length × Height</span>
                         </label>
                         <label class="flex items-center gap-2 cursor-pointer">
-                            <input 
-                                type="radio" 
-                                v-model="form.manual_area_mode" 
+                            <input
+                                type="radio"
+                                v-model="form.manual_area_mode"
                                 value="DIRECT"
                                 class="w-4 h-4 text-blue-600"
                             />
@@ -460,9 +503,9 @@ const submit = () => {
                     <div v-if="showDimensionsInput" class="flex gap-3">
                         <div class="flex-1">
                             <label class="text-xs font-bold text-gray-500">Length (ft)</label>
-                            <input 
-                                v-model="form.length" 
-                                type="number" 
+                            <input
+                                v-model="form.length"
+                                type="number"
                                 step="0.01"
                                 class="w-full border border-gray-300 rounded p-3 h-12 mt-1"
                                 placeholder="0.00"
@@ -470,9 +513,9 @@ const submit = () => {
                         </div>
                         <div class="flex-1">
                             <label class="text-xs font-bold text-gray-500">Height (ft)</label>
-                            <input 
-                                v-model="form.height" 
-                                type="number" 
+                            <input
+                                v-model="form.height"
+                                type="number"
                                 step="0.01"
                                 class="w-full border border-gray-300 rounded p-3 h-12 mt-1"
                                 placeholder="0.00"
@@ -483,9 +526,9 @@ const submit = () => {
                     <!-- Option B: Enter Area Directly -->
                     <div v-if="showManualAreaInput">
                         <label class="text-xs font-bold text-gray-500">Area (sqft)</label>
-                        <input 
-                            v-model="form.direct_area" 
-                            type="number" 
+                        <input
+                            v-model="form.direct_area"
+                            type="number"
                             step="0.01"
                             class="w-full border border-gray-300 rounded p-3 h-12 mt-1"
                             placeholder="0.00"
@@ -497,15 +540,15 @@ const submit = () => {
                 <div v-if="selectedSurface?.unit_type === 'LINEAR'" class="space-y-3">
                     <div v-if="form.measurement_source === 'ROOM_DEFAULT'" class="bg-blue-50 p-3 rounded">
                         <p class="text-sm text-blue-800">
-                            <span class="font-bold">Room Default:</span> 
-                            {{ zone?.length || 0 }} ft
+                            <span class="font-bold">Room Default:</span>
+                            {{ (Number(zone?.length) || 0).toFixed(2) }} ft
                         </p>
                     </div>
                     <div v-else>
                         <label class="text-xs font-bold text-gray-500">Length (ft)</label>
-                        <input 
-                            v-model="form.length" 
-                            type="number" 
+                        <input
+                            v-model="form.length"
+                            type="number"
                             step="0.01"
                             class="w-full border border-gray-300 rounded p-3 h-12 mt-1"
                             placeholder="0.00"
@@ -517,9 +560,9 @@ const submit = () => {
                 <div v-if="selectedSurface?.unit_type === 'COUNT'" class="space-y-3">
                     <div>
                         <label class="text-xs font-bold text-gray-500">Quantity</label>
-                        <input 
-                            v-model="form.quantity" 
-                            type="number" 
+                        <input
+                            v-model="form.quantity"
+                            type="number"
                             class="w-full border border-gray-300 rounded p-3 h-12 mt-1"
                             placeholder="1"
                         />
@@ -530,9 +573,9 @@ const submit = () => {
                 <div v-if="selectedSurface?.unit_type === 'LUMPSUM'" class="space-y-3">
                     <div>
                         <label class="text-xs font-bold text-gray-500">Lumpsum Amount (₹)</label>
-                        <input 
-                            v-model="form.lumpsum_amount" 
-                            type="number" 
+                        <input
+                            v-model="form.lumpsum_amount"
+                            type="number"
                             step="0.01"
                             class="w-full border border-gray-300 rounded p-3 h-12 mt-1"
                             placeholder="0.00"
@@ -543,7 +586,7 @@ const submit = () => {
                 <!-- Gross Quantity Display -->
                 <div class="mt-4 p-3 bg-gray-100 rounded">
                     <p class="text-sm text-gray-600">
-                        <span class="font-bold">Gross Qty:</span> {{ grossQty.toFixed(2) }} 
+                        <span class="font-bold">Gross Qty:</span> {{ (isNaN(grossQty) ? 0 : grossQty).toFixed(2) }}
                         <span v-if="selectedSurface?.unit_type === 'AREA'">sqft</span>
                         <span v-else-if="selectedSurface?.unit_type === 'LINEAR'">ft</span>
                         <span v-else-if="selectedSurface?.unit_type === 'COUNT'">units</span>
@@ -555,7 +598,7 @@ const submit = () => {
             <div v-if="form.system_id && selectedSurface?.unit_type === 'AREA'" class="bg-white p-4 rounded shadow">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="font-bold border-b-0">6. DEDUCTIONS</h3>
-                    <button 
+                    <button
                         type="button"
                         @click="showDeductionModal = true"
                         class="text-sm text-blue-600 font-medium"
@@ -566,16 +609,16 @@ const submit = () => {
 
                 <!-- Deductions List -->
                 <div v-if="form.deductions.length > 0" class="space-y-2">
-                    <div 
-                        v-for="deduction in form.deductions" 
+                    <div
+                        v-for="deduction in form.deductions"
                         :key="deduction.id"
                         class="flex items-center gap-3 p-2 bg-gray-50 rounded"
                     >
                         <span class="text-sm font-medium flex-1">
                             {{ deductionTypes.find(d => d.type === deduction.type)?.label }}
                         </span>
-                        <input 
-                            type="number" 
+                        <input
+                            type="number"
                             :value="deduction.count"
                             @input="updateDeductionCount(deduction.id, Number($event.target.value))"
                             class="w-16 border border-gray-300 rounded p-2 h-10 text-center"
@@ -585,7 +628,7 @@ const submit = () => {
                         <span class="text-sm font-medium w-20 text-right">
                             {{ deduction.area.toFixed(2) }} sqft
                         </span>
-                        <button 
+                        <button
                             type="button"
                             @click="removeDeduction(deduction.id)"
                             class="text-red-500 font-bold px-2"
@@ -601,9 +644,9 @@ const submit = () => {
                 <!-- Manual Deduction Input -->
                 <div class="mt-3">
                     <label class="text-xs font-bold text-gray-500">Custom Area Deduction (sqft)</label>
-                    <input 
-                        v-model="form.manual_deduction_sqft" 
-                        type="number" 
+                    <input
+                        v-model="form.manual_deduction_sqft"
+                        type="number"
                         step="0.01"
                         min="0"
                         class="w-full border border-gray-300 rounded p-3 h-12 mt-1"
@@ -614,7 +657,7 @@ const submit = () => {
                 <!-- Total Deductions -->
                 <div class="mt-3 p-2 bg-orange-50 rounded">
                     <p class="text-sm text-orange-700 font-medium">
-                        Total Deductions: {{ totalDeductions.toFixed(2) }} sqft
+                        Total Deductions: {{ (isNaN(totalDeductions) ? 0 : totalDeductions).toFixed(2) }} sqft
                     </p>
                 </div>
             </div>
@@ -636,21 +679,21 @@ const submit = () => {
             <!-- 8) PRICING MODE -->
             <div v-if="form.system_id" class="bg-white p-4 rounded shadow">
                 <h3 class="font-bold border-b pb-2 mb-3">8. PRICING MODE</h3>
-                
+
                 <div class="flex gap-4 mb-4">
                     <label class="flex items-center gap-2 cursor-pointer">
-                        <input 
-                            type="radio" 
-                            v-model="form.pricing_mode" 
+                        <input
+                            type="radio"
+                            v-model="form.pricing_mode"
                             value="CALCULATED"
                             class="w-4 h-4 text-blue-600"
                         />
                         <span class="text-sm font-medium">Calculated</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer">
-                        <input 
-                            type="radio" 
-                            v-model="form.pricing_mode" 
+                        <input
+                            type="radio"
+                            v-model="form.pricing_mode"
                             value="LUMPSUM"
                             class="w-4 h-4 text-blue-600"
                         />
@@ -661,9 +704,9 @@ const submit = () => {
                 <!-- Lumpsum Amount Input -->
                 <div v-if="form.pricing_mode === 'LUMPSUM'" class="mt-3">
                     <label class="text-xs font-bold text-gray-500">Enter Lumpsum Amount (₹)</label>
-                    <input 
-                        v-model="form.lumpsum_amount" 
-                        type="number" 
+                    <input
+                        v-model="form.lumpsum_amount"
+                        type="number"
                         step="0.01"
                         class="w-full border border-gray-300 rounded p-3 h-12 mt-1"
                         placeholder="0.00"
@@ -674,48 +717,48 @@ const submit = () => {
             <!-- 9) PRICING SUMMARY -->
             <div v-if="form.system_id" class="bg-green-50 p-4 rounded shadow border-2 border-green-200">
                 <h3 class="font-bold text-green-800 mb-3">PRICING SUMMARY</h3>
-                
+
                 <div class="space-y-2">
                     <div class="flex justify-between text-sm">
                         <span class="text-gray-600">Net Quantity:</span>
-                        <span class="font-medium">{{ netQty.toFixed(2) }} 
+                        <span class="font-medium">{{ (isNaN(netQty) ? 0 : netQty).toFixed(2) }}
                             <span v-if="selectedSurface?.unit_type === 'AREA'">sqft</span>
                             <span v-else-if="selectedSurface?.unit_type === 'LINEAR'">ft</span>
                             <span v-else-if="selectedSurface?.unit_type === 'COUNT'">units</span>
                         </span>
                     </div>
-                    
+
                     <div v-if="form.pricing_mode === 'CALCULATED' && selectedSurface?.unit_type !== 'LUMPSUM'" class="flex justify-between text-sm">
                         <span class="text-gray-600">Rate:</span>
-                        <span class="font-medium">₹{{ selectedSystem?.base_rate || 0 }} / 
+                        <span class="font-medium">₹{{ selectedSystem?.base_rate || 0 }} /
                             <span v-if="selectedSurface?.unit_type === 'AREA'">sqft</span>
                             <span v-else-if="selectedSurface?.unit_type === 'LINEAR'">ft</span>
                             <span v-else-if="selectedSurface?.unit_type === 'COUNT'">unit</span>
                         </span>
                     </div>
-                    
+
                     <div v-if="form.pricing_mode === 'LUMPSUM'" class="flex justify-between text-sm">
                         <span class="text-gray-600">Lumpsum:</span>
                         <span class="font-medium">₹{{ form.lumpsum_amount || 0 }}</span>
                     </div>
-                    
+
                     <div class="border-t pt-2 mt-2">
                         <div class="flex justify-between text-lg">
                             <span class="font-bold text-green-800">TOTAL:</span>
-                            <span class="font-bold text-green-700">₹{{ calculatedAmount.toFixed(2) }}</span>
+                            <span class="font-bold text-green-700">₹{{ (isNaN(calculatedAmount) ? 0 : calculatedAmount).toFixed(2) }}</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- 10) SAVE ACTION -->
-            <button 
-                type="submit" 
+            <button
+                type="submit"
                 :disabled="!form.system_id"
                 class="w-full bg-blue-600 text-white py-4 rounded font-bold shadow text-lg h-14"
                 :class="!form.system_id ? 'bg-gray-400' : 'bg-blue-600'"
             >
-                SAVE ITEM - ₹{{ calculatedAmount.toFixed(2) }}
+                SAVE ITEM - ₹{{ (isNaN(calculatedAmount) ? 0 : calculatedAmount).toFixed(2) }}
             </button>
         </form>
 
@@ -726,8 +769,8 @@ const submit = () => {
                     <h3 class="font-bold text-lg">Add Deduction</h3>
                 </div>
                 <div class="p-4 space-y-3">
-                    <button 
-                        v-for="type in deductionTypes" 
+                    <button
+                        v-for="type in deductionTypes"
                         :key="type.type"
                         @click="addDeduction(type.type); showDeductionModal = false"
                         class="w-full p-3 text-left border rounded hover:bg-gray-50"
@@ -737,7 +780,7 @@ const submit = () => {
                             ({{ type.defaultArea }} sqft each)
                         </span>
                     </button>
-                    <button 
+                    <button
                         @click="showDeductionModal = false"
                         class="w-full p-3 text-left border rounded bg-gray-50"
                     >
@@ -746,7 +789,7 @@ const submit = () => {
                     </button>
                 </div>
                 <div class="p-4 border-t">
-                    <button 
+                    <button
                         @click="showDeductionModal = false"
                         class="w-full py-2 text-gray-600 hover:bg-gray-100 rounded"
                     >

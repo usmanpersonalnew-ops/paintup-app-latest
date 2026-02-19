@@ -238,35 +238,64 @@ const displayNotes = computed(() => {
             </div>
 
             <!-- Company Header with Logo -->
-            <div class="bg-white rounded-lg shadow mb-6 overflow-hidden">
+            <div class="bg-white rounded-xl shadow-lg mb-6 overflow-hidden border border-gray-100">
                 <!-- Header Section with Logo -->
-                <div class="p-6" :style="{ backgroundColor: primaryColor + '10', borderBottom: '2px solid ' + primaryColor }">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-4">
-                            <!-- Logo -->
-                            <div class="flex-shrink-0">
-                                <img
-                                    v-if="logoUrl"
-                                    :src="logoUrl"
-                                    :alt="companyName"
-                                    class="h-16 w-auto object-contain"
-                                />
-                                <ApplicationLogo v-else class="h-16 w-auto fill-current" :style="{ color: primaryColor }" />
+                <div class="relative p-8 bg-gradient-to-r" :style="{ backgroundImage: `linear-gradient(135deg, ${primaryColor}15 0%, ${primaryColor}08 50%, ${primaryColor}05 100%)`, borderBottom: `3px solid ${primaryColor}` }">
+                    <!-- Decorative Elements -->
+                    <div class="absolute top-0 right-0 w-64 h-64 opacity-5" :style="{ background: `radial-gradient(circle, ${primaryColor} 0%, transparent 70%)` }"></div>
+                    <div class="absolute bottom-0 left-0 w-48 h-48 opacity-5" :style="{ background: `radial-gradient(circle, ${primaryColor} 0%, transparent 70%)` }"></div>
+
+                    <div class="relative flex items-center justify-between">
+                        <div class="flex items-center gap-6">
+                            <!-- Logo with Enhanced Styling -->
+                            <div class="flex-shrink-0 relative">
+                                <div class="absolute inset-0 rounded-2xl blur-xl opacity-20" :style="{ backgroundColor: primaryColor }"></div>
+                                <div class="relative bg-white p-3 rounded-2xl shadow-md border-2" :style="{ borderColor: primaryColor + '30' }">
+                                    <img
+                                        v-if="logoUrl"
+                                        :src="logoUrl"
+                                        :alt="companyName"
+                                        class="h-20 w-20 object-contain"
+                                    />
+                                    <ApplicationLogo v-else class="h-20 w-20 fill-current" :style="{ color: primaryColor }" />
+                                </div>
                             </div>
                             <!-- Company Name and Info -->
-                            <div>
-                                <h1 class="text-2xl font-bold" :style="{ color: primaryColor }">{{ companyName }}</h1>
-                                <p v-if="address" class="text-sm text-gray-600 mt-1">{{ address }}</p>
-                                <div v-if="supportEmail || supportWhatsapp" class="flex gap-4 mt-2 text-xs text-gray-600">
-                                    <span v-if="supportEmail">📧 {{ supportEmail }}</span>
-                                    <span v-if="supportWhatsapp">📱 {{ supportWhatsapp }}</span>
+                            <div class="flex-1">
+                                <h1 class="text-3xl font-bold mb-2" :style="{ color: primaryColor }">{{ companyName }}</h1>
+                                <div v-if="address" class="flex items-center gap-2 mb-2">
+                                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    <p class="text-sm text-gray-700 font-medium">{{ address }}</p>
+                                </div>
+                                <div v-if="supportEmail || supportWhatsapp" class="flex gap-4 mt-3">
+                                    <a v-if="supportEmail" :href="`mailto:${supportEmail}`" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/80 hover:bg-white transition-colors text-xs font-medium text-gray-700 shadow-sm border border-gray-200">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                        </svg>
+                                        {{ supportEmail }}
+                                    </a>
+                                    <a v-if="supportWhatsapp" :href="`https://wa.me/${supportWhatsapp.replace(/[^0-9]/g, '')}`" target="_blank" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/80 hover:bg-white transition-colors text-xs font-medium text-gray-700 shadow-sm border border-gray-200">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                                        </svg>
+                                        {{ supportWhatsapp }}
+                                    </a>
                                 </div>
                             </div>
                         </div>
-                        <!-- Quote Badge -->
-                        <div class="text-right">
-                            <div class="inline-block px-4 py-2 rounded-lg" :style="{ backgroundColor: primaryColor, color: 'white' }">
-                                <p class="text-sm font-medium">QUOTE</p>
+                        <!-- Quote Badge with Enhanced Design -->
+                        <div class="text-right flex-shrink-0">
+                            <div class="inline-flex flex-col items-end gap-2">
+                                <div class="inline-flex items-center gap-2 px-5 py-3 rounded-xl shadow-lg transform transition-transform hover:scale-105" :style="{ backgroundColor: primaryColor, color: 'white' }">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <p class="text-sm font-bold tracking-wide">QUOTE</p>
+                                </div>
+                                <p class="text-xs text-gray-500 font-medium">Document</p>
                             </div>
                         </div>
                     </div>

@@ -48,6 +48,27 @@ const formBreadth = ref(null);
 const formHeight = ref(null);
 const deductions = ref(0);
 
+// Computed: Filtered Surfaces (by zone type)
+const filteredSurfaces = computed(() => {
+  if (!props.surfaces || !props.room) return [];
+
+  const roomType = props.room.type || 'INTERIOR';
+
+  // Filter surfaces based on room type
+  return props.surfaces.filter(surface => {
+    // If room is INTERIOR, show INTERIOR and BOTH surfaces
+    if (roomType === 'INTERIOR') {
+      return surface.category === 'INTERIOR' || surface.category === 'BOTH';
+    }
+    // If room is EXTERIOR, show EXTERIOR and BOTH surfaces
+    if (roomType === 'EXTERIOR') {
+      return surface.category === 'EXTERIOR' || surface.category === 'BOTH';
+    }
+    // Default: show all surfaces
+    return true;
+  });
+});
+
 // Computed: Filtered products by tier
 const filteredProducts = computed(() => {
   if (selectedTier.value === 'all') {
@@ -76,7 +97,7 @@ const grossArea = computed(() => {
   if (selectedSurface.value?.unit_type === 'COUNT') {
     return measurementMode.value === 'ZONE_DEFAULT' ? 1 : (formBreadth.value || 1);
   }
-  
+
   if (measurementMode.value === 'ZONE_DEFAULT') {
     const l = props.room.length || 0;
     const h = props.room.height || 0;
@@ -247,17 +268,17 @@ const submitService = () => {
     alert('No zone found for this room');
     return;
   }
-  
+
   serviceForm.project_zone_id = zone.id;
-  
+
   // If custom mode, set unit_type based on selection
   if (serviceMode.value === 'custom') {
     serviceForm.unit_type = 'AREA'; // Default for custom
   }
-  
+
   serviceForm.quantity = serviceQuantity.value;
   serviceForm.rate = serviceRate.value;
-  
+
   const formData = new FormData();
   formData.append('project_zone_id', serviceForm.project_zone_id);
   if (serviceForm.master_service_id) {
@@ -271,7 +292,7 @@ const submitService = () => {
   if (servicePhoto.value) {
     formData.append('photo', servicePhoto.value);
   }
-  
+
   // Use fetch for file upload
   fetch(route('supervisor.zones.services.store', zone.id), {
     method: 'POST',
@@ -433,7 +454,7 @@ const saveZone = () => {
             + Add Service / Repair
           </button>
         </div>
-        
+
         <!-- Existing Services List -->
         <div v-if="zoneServices && zoneServices.length > 0" class="space-y-3">
           <div
@@ -464,7 +485,7 @@ const saveZone = () => {
       </div>
 
       <form @submit.prevent="submit" class="space-y-6">
-        
+
         <!-- 1. Surface Dropdown -->
         <div>
           <InputLabel for="surface" value="Surface Type" />
@@ -474,11 +495,14 @@ const saveZone = () => {
             class="mt-1 block w-full h-12 px-3 border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500"
           >
             <option :value="null">Select Surface</option>
-            <option v-for="surface in surfaces" :key="surface.id" :value="surface.id">
+            <option v-for="surface in filteredSurfaces" :key="surface.id" :value="surface.id">
               {{ surface.name }} ({{ surface.unit_type }})
             </option>
           </select>
           <InputError :message="form.errors.surface_id" class="mt-2" />
+          <p v-if="filteredSurfaces.length === 0" class="text-sm text-orange-500 mt-1">
+            No surfaces available for {{ room?.type || 'INTERIOR' }} rooms
+          </p>
         </div>
 
         <!-- 2. Tier Filter Tabs -->
@@ -548,7 +572,7 @@ const saveZone = () => {
         <!-- 5. Measurements Section -->
         <div v-if="selectedSurface" class="bg-white rounded-xl shadow-sm p-4 space-y-4">
           <h3 class="font-semibold text-gray-900">Measurements</h3>
-          
+
           <!-- Radio: Default vs Manual -->
           <div class="flex gap-4">
             <label class="flex items-center">
@@ -645,7 +669,7 @@ const saveZone = () => {
         <!-- 6. Pricing Section -->
         <div v-if="selectedSurface" class="bg-white rounded-xl shadow-sm p-4 space-y-4">
           <h3 class="font-semibold text-gray-900">Pricing</h3>
-          
+
           <!-- Pricing Mode Radio -->
           <div class="flex gap-4">
             <label class="flex items-center">
@@ -702,7 +726,7 @@ const saveZone = () => {
         <!-- Optional Fields -->
         <div v-if="selectedSurface" class="bg-white rounded-xl shadow-sm p-4 space-y-4">
           <h3 class="font-semibold text-gray-900">Additional Details</h3>
-          
+
           <div>
             <InputLabel for="color_code" value="Color Code (Optional)" />
             <TextInput
@@ -729,8 +753,8 @@ const saveZone = () => {
         <!-- Save Button -->
         <div v-if="selectedSurface" class="fixed bottom-0 left-0 right-0 bg-white border-t p-4">
           <div class="max-w-lg mx-auto">
-            <PrimaryButton 
-              type="submit" 
+            <PrimaryButton
+              type="submit"
               class="w-full h-14 text-lg font-semibold"
               :disabled="form.processing"
             >
@@ -749,7 +773,7 @@ const saveZone = () => {
     <Modal :show="showServiceModal" @close="closeServiceModal" max-width="md">
       <div class="p-6">
         <h2 class="text-lg font-semibold text-gray-900 mb-4">Add Service / Repair</h2>
-        
+
         <!-- Mode Toggle -->
         <div class="flex gap-2 mb-4">
           <button
@@ -773,7 +797,7 @@ const saveZone = () => {
             Custom
           </button>
         </div>
-        
+
         <!-- Catalog Mode -->
         <div v-if="serviceMode === 'catalog'" class="space-y-4">
           <div>
@@ -791,7 +815,7 @@ const saveZone = () => {
             </select>
           </div>
         </div>
-        
+
         <!-- Custom Mode -->
         <div v-if="serviceMode === 'custom'" class="space-y-4">
           <div>
@@ -804,7 +828,7 @@ const saveZone = () => {
               placeholder="e.g., Extra Labor"
             />
           </div>
-          
+
           <div>
             <InputLabel for="custom_unit_type" value="Unit Type" />
             <select
@@ -819,7 +843,7 @@ const saveZone = () => {
             </select>
           </div>
         </div>
-        
+
         <!-- Quantity & Rate -->
         <div class="grid grid-cols-2 gap-4 mt-4">
           <div>
@@ -847,7 +871,7 @@ const saveZone = () => {
             />
           </div>
         </div>
-        
+
         <!-- Photo Upload (Repair Only) -->
         <div v-if="isRepairService" class="mt-4">
           <InputLabel for="photo" value="Photo Evidence (Required)" />
@@ -860,7 +884,7 @@ const saveZone = () => {
           />
           <p class="text-xs text-gray-500 mt-1">Upload a photo of the repair area</p>
         </div>
-        
+
         <!-- Amount Display -->
         <div class="bg-gray-50 rounded-lg p-4 mt-4">
           <div class="flex justify-between text-lg font-bold">
@@ -868,7 +892,7 @@ const saveZone = () => {
             <span class="text-green-600">{{ formatCurrency(serviceAmount) }}</span>
           </div>
         </div>
-        
+
         <!-- Remarks -->
         <div class="mt-4">
           <InputLabel for="service_remarks" value="Remarks (Optional)" />
@@ -880,7 +904,7 @@ const saveZone = () => {
             placeholder="Add any notes about this service..."
           ></textarea>
         </div>
-        
+
         <!-- Actions -->
         <div class="flex gap-3 mt-6">
           <button

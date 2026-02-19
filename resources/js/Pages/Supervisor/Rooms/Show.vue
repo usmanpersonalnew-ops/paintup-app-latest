@@ -46,6 +46,27 @@ const formBreadth = ref(null);
 const formHeight = ref(null);
 const deductions = ref(0);
 
+// Computed: Filtered Surfaces (by room type)
+const filteredSurfaces = computed(() => {
+  if (!props.surfaces || !props.room) return [];
+
+  const roomType = props.room.type || 'INTERIOR';
+
+  // Filter surfaces based on room type
+  return props.surfaces.filter(surface => {
+    // If room is INTERIOR, show INTERIOR and BOTH surfaces
+    if (roomType === 'INTERIOR') {
+      return surface.category === 'INTERIOR' || surface.category === 'BOTH';
+    }
+    // If room is EXTERIOR, show EXTERIOR and BOTH surfaces
+    if (roomType === 'EXTERIOR') {
+      return surface.category === 'EXTERIOR' || surface.category === 'BOTH';
+    }
+    // Default: show all surfaces
+    return true;
+  });
+});
+
 // Computed: Filtered products by tier
 const filteredProducts = computed(() => {
   if (selectedTier.value === 'all') {
@@ -74,7 +95,7 @@ const grossArea = computed(() => {
   if (selectedSurface.value?.unit_type === 'COUNT') {
     return measurementMode.value === 'ZONE_DEFAULT' ? 1 : (formBreadth.value || 1);
   }
-  
+
   if (measurementMode.value === 'ZONE_DEFAULT') {
     const l = props.room.length || 0;
     const h = props.room.height || 0;
@@ -206,7 +227,7 @@ const tierColors = {
 
       <div v-else class="space-y-3 mt-2">
         <input v-model="editForm.name" type="text" class="w-full border-gray-300 rounded-md shadow-sm text-lg font-bold p-2" placeholder="Zone Name">
-        
+
         <div class="flex gap-4">
           <label class="flex items-center gap-2">
             <input type="radio" v-model="editForm.type" value="INTERIOR" class="text-blue-600"> Interior
@@ -238,7 +259,7 @@ const tierColors = {
       </div>
 
       <form @submit.prevent="submit" class="space-y-6">
-        
+
         <!-- 1. Surface Dropdown -->
         <div>
           <InputLabel for="surface" value="Surface Type" />
@@ -248,11 +269,14 @@ const tierColors = {
             class="mt-1 block w-full h-12 px-3 border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500"
           >
             <option :value="null">Select Surface</option>
-            <option v-for="surface in surfaces" :key="surface.id" :value="surface.id">
+            <option v-for="surface in filteredSurfaces" :key="surface.id" :value="surface.id">
               {{ surface.name }} ({{ surface.unit_type }})
             </option>
           </select>
           <InputError :message="form.errors.surface_id" class="mt-2" />
+          <p v-if="filteredSurfaces.length === 0" class="text-sm text-orange-500 mt-1">
+            No surfaces available for {{ room?.type || 'INTERIOR' }} rooms
+          </p>
         </div>
 
         <!-- 2. Tier Filter Tabs -->
@@ -322,7 +346,7 @@ const tierColors = {
         <!-- 5. Measurements Section -->
         <div v-if="selectedSurface" class="bg-white rounded-xl shadow-sm p-4 space-y-4">
           <h3 class="font-semibold text-gray-900">Measurements</h3>
-          
+
           <!-- Radio: Default vs Manual -->
           <div class="flex gap-4">
             <label class="flex items-center">
@@ -419,7 +443,7 @@ const tierColors = {
         <!-- 6. Pricing Section -->
         <div v-if="selectedSurface" class="bg-white rounded-xl shadow-sm p-4 space-y-4">
           <h3 class="font-semibold text-gray-900">Pricing</h3>
-          
+
           <!-- Pricing Mode Radio -->
           <div class="flex gap-4">
             <label class="flex items-center">
@@ -476,7 +500,7 @@ const tierColors = {
         <!-- Optional Fields -->
         <div v-if="selectedSurface" class="bg-white rounded-xl shadow-sm p-4 space-y-4">
           <h3 class="font-semibold text-gray-900">Additional Details</h3>
-          
+
           <div>
             <InputLabel for="color_code" value="Color Code (Optional)" />
             <TextInput
@@ -503,8 +527,8 @@ const tierColors = {
         <!-- Save Button -->
         <div v-if="selectedSurface" class="fixed bottom-0 left-0 right-0 bg-white border-t p-4">
           <div class="max-w-lg mx-auto">
-            <PrimaryButton 
-              type="submit" 
+            <PrimaryButton
+              type="submit"
               class="w-full h-14 text-lg font-semibold"
               :disabled="form.processing"
             >

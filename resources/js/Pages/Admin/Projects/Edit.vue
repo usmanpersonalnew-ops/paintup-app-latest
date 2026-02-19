@@ -1,6 +1,7 @@
 <script setup>
-import { useForm, Link } from '@inertiajs/vue3';
+import { useForm, Link, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import axios from 'axios';
 
 const props = defineProps({
     project: {
@@ -113,7 +114,8 @@ const confirmCashPayment = async (milestone) => {
     processing.value[milestone] = true;
     try {
         await axios.post(`/admin/projects/${props.project.id}/confirm-cash`, { milestone });
-        window.location.reload();
+        // Use Inertia router to reload with fresh data
+        router.reload({ only: ['project'] });
     } catch (e) {
         alert(e.response?.data?.message || 'Failed');
     } finally {
@@ -186,77 +188,81 @@ const updateWorkStatus = async (newStatus) => {
 
 <template>
     <AdminLayout>
-        <div class="mb-8">
-            <Link
-                :href="route('admin.projects.index')"
-                class="text-sm text-blue-600 hover:text-blue-800"
-            >
-                ← Back to Projects
-            </Link>
-        </div>
-
-        <div class="mb-8 flex items-center justify-between">
-            <h1 class="text-2xl font-bold text-gray-800">Project Details</h1>
-            <div class="flex items-center gap-3">
-                <Link 
-                    :href="route('admin.projects.quote', project.id)" 
-                    class="bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-green-700 flex items-center gap-2"
+        <div class="px-4 sm:px-6 lg:px-8 py-6">
+            <div class="mb-6">
+                <Link
+                    :href="route('admin.projects.index')"
+                    class="text-sm text-blue-600 hover:text-blue-800 inline-flex items-center gap-1"
                 >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                     </svg>
-                    View Quote
+                    Back to Projects
                 </Link>
-                <span :class="['px-4 py-1.5 rounded-full text-sm font-medium', getStatusColor(project.status)]">
-                    {{ project.status }}
-                </span>
             </div>
-        </div>
+
+            <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <h1 class="text-2xl font-bold text-gray-800">Project Details</h1>
+                <div class="flex items-center gap-3">
+                    <Link
+                        :href="route('admin.projects.quote', project.id)"
+                        class="bg-green-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-green-700 flex items-center gap-2 transition-colors"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        View Quote
+                    </Link>
+                    <span :class="['px-4 py-2 rounded-full text-sm font-medium', getStatusColor(project.status)]">
+                        {{ project.status }}
+                    </span>
+                </div>
+            </div>
 
         <!-- Payment Information Section -->
-        <div class="mb-8 overflow-hidden rounded-lg bg-white shadow">
-            <div class="px-6 py-5 bg-blue-600 border-b">
+        <div class="mb-6 overflow-hidden rounded-lg bg-white shadow-sm border border-gray-200">
+            <div class="px-6 py-4 bg-blue-600 border-b border-blue-700">
                 <h2 class="text-lg font-semibold text-white">💰 Payment Information (40-40-20)</h2>
             </div>
-            <div class="p-6">
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+            <div class="p-6 lg:p-8">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
                     <!-- Total Amount -->
-                    <div>
-                        <p class="text-sm text-gray-500">Total Quote Amount</p>
+                    <div class="pb-4 border-b sm:border-b-0 sm:border-r border-gray-200 sm:pr-6">
+                        <p class="text-sm text-gray-500 mb-1.5">Total Quote Amount</p>
                         <p class="text-xl font-bold text-gray-900">{{ formatCurrency(project.total_amount || 0) }}</p>
                     </div>
 
                     <!-- Payment Method -->
-                    <div>
-                        <p class="text-sm text-gray-500">Payment Method</p>
+                    <div class="pb-4 border-b sm:border-b-0 sm:border-r border-gray-200 sm:pr-6">
+                        <p class="text-sm text-gray-500 mb-1.5">Payment Method</p>
                         <p class="text-lg font-semibold" :class="project.payment_method === 'ONLINE' ? 'text-green-600' : 'text-orange-600'">
                             {{ project.payment_method || 'Not Selected' }}
                         </p>
                     </div>
 
                     <!-- Booking Status -->
-                    <div>
-                        <p class="text-sm text-gray-500">Booking (40%)</p>
-                        <p class="text-lg font-bold text-blue-600">{{ formatCurrency(getBookingAmount(project)) }}</p>
-                        <span :class="['inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold capitalize mt-1', getPaymentStatusColor(project.booking_status)]">
+                    <div class="pb-4 border-b sm:border-b-0 sm:border-r border-gray-200 sm:pr-6 lg:border-r-0">
+                        <p class="text-sm text-gray-500 mb-1.5">Booking (40%)</p>
+                        <p class="text-lg font-bold text-blue-600 mb-1.5">{{ formatCurrency(getBookingAmount(project)) }}</p>
+                        <span :class="['inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold capitalize', getPaymentStatusColor(project.booking_status)]">
                             {{ project.booking_status || 'PENDING' }}
                         </span>
                     </div>
 
                     <!-- Mid Status -->
-                    <div>
-                        <p class="text-sm text-gray-500">Mid Payment (40%)</p>
-                        <p class="text-lg font-bold text-blue-600">{{ formatCurrency(getMidAmount(project)) }}</p>
-                        <span :class="['inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold capitalize mt-1', getPaymentStatusColor(project.mid_status)]">
+                    <div class="pb-4 sm:pb-0">
+                        <p class="text-sm text-gray-500 mb-1.5">Mid Payment (40%)</p>
+                        <p class="text-lg font-bold text-blue-600 mb-1.5">{{ formatCurrency(getMidAmount(project)) }}</p>
+                        <span :class="['inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold capitalize', getPaymentStatusColor(project.mid_status)]">
                             {{ project.mid_status || 'LOCKED' }}
                         </span>
                     </div>
 
                     <!-- Final Status -->
-                    <div>
-                        <p class="text-sm text-gray-500">Final Payment (20%)</p>
-                        <p class="text-lg font-bold text-blue-600">{{ formatCurrency(getFinalAmount(project)) }}</p>
-                        <span :class="['inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold capitalize mt-1', getPaymentStatusColor(project.final_status)]">
+                    <div class="col-span-1 sm:col-span-2 lg:col-span-1 pt-4 sm:pt-0 sm:border-t sm:border-r border-gray-200 sm:pr-6 lg:border-t-0 lg:border-r-0 lg:pt-0">
+                        <p class="text-sm text-gray-500 mb-1.5">Final Payment (20%)</p>
+                        <p class="text-lg font-bold text-blue-600 mb-1.5">{{ formatCurrency(getFinalAmount(project)) }}</p>
+                        <span :class="['inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold capitalize', getPaymentStatusColor(project.final_status)]">
                             {{ project.final_status || 'LOCKED' }}
                         </span>
                     </div>
@@ -264,17 +270,17 @@ const updateWorkStatus = async (newStatus) => {
 
                 <!-- Payment Timestamps -->
                 <div class="mt-6 pt-6 border-t border-gray-200">
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 text-sm">
-                        <div v-if="project.booking_paid_at">
-                            <p class="text-gray-500 mb-1">Booking Paid At</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 text-sm">
+                        <div v-if="project.booking_paid_at" class="bg-gray-50 p-3 rounded-lg">
+                            <p class="text-gray-500 mb-1.5">Booking Paid At</p>
                             <p class="font-medium text-gray-900">{{ formatDate(project.booking_paid_at) }}</p>
                         </div>
-                        <div v-if="project.mid_paid_at">
-                            <p class="text-gray-500 mb-1">Mid Paid At</p>
+                        <div v-if="project.mid_paid_at" class="bg-gray-50 p-3 rounded-lg">
+                            <p class="text-gray-500 mb-1.5">Mid Paid At</p>
                             <p class="font-medium text-gray-900">{{ formatDate(project.mid_paid_at) }}</p>
                         </div>
-                        <div v-if="project.final_paid_at">
-                            <p class="text-gray-500 mb-1">Final Paid At</p>
+                        <div v-if="project.final_paid_at" class="bg-gray-50 p-3 rounded-lg">
+                            <p class="text-gray-500 mb-1.5">Final Paid At</p>
                             <p class="font-medium text-gray-900">{{ formatDate(project.final_paid_at) }}</p>
                         </div>
                     </div>
@@ -282,12 +288,19 @@ const updateWorkStatus = async (newStatus) => {
 
                 <!-- Cash Confirmation Info -->
                 <div v-if="project.cash_confirmed_at" class="mt-6 pt-6 border-t border-gray-200">
-                    <p class="text-sm text-green-600 font-medium">✓ Cash confirmed by supervisor on {{ formatDate(project.cash_confirmed_at) }}</p>
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <p class="text-sm text-green-700 font-medium flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Cash confirmed by supervisor on {{ formatDate(project.cash_confirmed_at) }}
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Admin Manual Payment Actions -->
                 <div class="mt-6 pt-6 border-t border-gray-200">
-                    <p class="text-sm font-semibold text-gray-700 mb-3">Admin Manual Actions:</p>
+                    <p class="text-sm font-semibold text-gray-700 mb-4">Admin Manual Actions:</p>
                     <div class="flex flex-wrap gap-3">
                         <button
                             v-if="project.booking_status !== 'PAID'"
@@ -327,25 +340,25 @@ const updateWorkStatus = async (newStatus) => {
         </div>
 
         <!-- Work Status Section -->
-        <div class="mb-8 overflow-hidden rounded-lg bg-white shadow">
-            <div class="px-6 py-5 bg-purple-600 border-b">
+        <div class="mb-6 overflow-hidden rounded-lg bg-white shadow-sm border border-gray-200">
+            <div class="px-6 py-4 bg-purple-600 border-b border-purple-700">
                 <h2 class="text-lg font-semibold text-white">🔧 Work Status (Admin Control)</h2>
             </div>
-            <div class="p-6">
+            <div class="p-6 lg:p-8">
                 <!-- Current Work Status -->
-                <div class="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
-                    <div>
-                        <p class="text-sm text-gray-500 mb-2">Current Status</p>
+                <div class="flex flex-col sm:flex-row sm:items-center gap-5 mb-6">
+                    <div class="flex-1">
+                        <p class="text-sm text-gray-500 mb-2.5">Current Status</p>
                         <span :class="['inline-flex items-center px-5 py-2.5 rounded-full text-base font-bold', getWorkStatusColor(project.work_status)]">
                             {{ project.work_status || 'PENDING' }}
                         </span>
                     </div>
-                    <div v-if="project.work_started_at" class="sm:pl-6 sm:border-l border-gray-200">
-                        <p class="text-sm text-gray-500 mb-1">Work Started</p>
+                    <div v-if="project.work_started_at" class="sm:pl-6 sm:border-l border-gray-200 flex-1">
+                        <p class="text-sm text-gray-500 mb-1.5">Work Started</p>
                         <p class="font-medium text-gray-900">{{ formatDate(project.work_started_at) }}</p>
                     </div>
-                    <div v-if="project.work_completed_at" class="sm:pl-6 sm:border-l border-gray-200">
-                        <p class="text-sm text-gray-500 mb-1">Work Completed</p>
+                    <div v-if="project.work_completed_at" class="sm:pl-6 sm:border-l border-gray-200 flex-1">
+                        <p class="text-sm text-gray-500 mb-1.5">Work Completed</p>
                         <p class="font-medium text-gray-900">{{ formatDate(project.work_completed_at) }}</p>
                     </div>
                 </div>
@@ -360,7 +373,7 @@ const updateWorkStatus = async (newStatus) => {
                                     project.work_status === status ? 'bg-purple-600' :
                                     ['PENDING', 'ASSIGNED', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CLOSED'].indexOf(project.work_status) > index ? 'bg-green-500' : 'bg-gray-200'
                                 ]"></div>
-                                <p :class="['text-xs mt-2 font-medium', project.work_status === status ? 'text-purple-600' : 'text-gray-500']">
+                                <p :class="['text-xs mt-2.5 font-medium', project.work_status === status ? 'text-purple-600' : 'text-gray-500']">
                                     {{ status.replace('_', ' ') }}
                                 </p>
                             </div>
@@ -371,7 +384,7 @@ const updateWorkStatus = async (newStatus) => {
 
                 <!-- Admin Work Status Controls -->
                 <div class="pt-6 border-t border-gray-200">
-                    <p class="text-sm font-semibold text-gray-700 mb-3">Change Work Status (Admin Override):</p>
+                    <p class="text-sm font-semibold text-gray-700 mb-4">Change Work Status (Admin Override):</p>
                     <div class="flex flex-wrap gap-3">
                         <button
                             v-for="status in workStatuses"
@@ -392,46 +405,46 @@ const updateWorkStatus = async (newStatus) => {
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Project Info -->
-            <div class="lg:col-span-2 overflow-hidden rounded-lg bg-white shadow">
-                <div class="px-4 lg:px-6 py-6">
+            <div class="lg:col-span-2 overflow-hidden rounded-lg bg-white shadow-sm border border-gray-200">
+                <div class="px-6 lg:px-8 py-6 lg:py-8">
                     <h2 class="text-lg font-semibold text-gray-800 mb-6">Project Information</h2>
 
-                    <form @submit.prevent="submit" class="space-y-5">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <form @submit.prevent="submit" class="space-y-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <div>
-                                <label class="mb-2 block text-sm font-medium text-gray-700">Client Name</label>
+                                <label class="mb-2.5 block text-sm font-medium text-gray-700">Client Name</label>
                                 <input
                                     v-model="form.client_name"
                                     type="text"
-                                    class="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
                                 />
                             </div>
                             <div>
-                                <label class="mb-2 block text-sm font-medium text-gray-700">Phone</label>
+                                <label class="mb-2.5 block text-sm font-medium text-gray-700">Phone</label>
                                 <input
                                     v-model="form.phone"
                                     type="text"
-                                    class="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
                                 />
                             </div>
                         </div>
 
                         <div>
-                            <label class="mb-2 block text-sm font-medium text-gray-700">Location</label>
+                            <label class="mb-2.5 block text-sm font-medium text-gray-700">Location</label>
                             <input
                                 v-model="form.location"
                                 type="text"
-                                class="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
                             />
                         </div>
 
-                        <div>
-                            <label class="mb-2 block text-sm font-medium text-gray-700">Status</label>
+                        <!-- <div>
+                            <label class="mb-2.5 block text-sm font-medium text-gray-700">Status</label>
                             <select
                                 v-model="form.status"
-                                class="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors bg-white"
                             >
                                 <option value="NEW">New</option>
                                 <option value="PENDING">Pending</option>
@@ -440,69 +453,69 @@ const updateWorkStatus = async (newStatus) => {
                                 <option value="REJECTED">Rejected</option>
                                 <option value="COMPLETED">Completed</option>
                             </select>
-                        </div>
+                        </div> -->
 
                         <!-- Assign Supervisor -->
                         <div>
-                            <label class="mb-2 block text-sm font-medium text-gray-700">Assign Supervisor</label>
+                            <label class="mb-2.5 block text-sm font-medium text-gray-700">Assign Supervisor</label>
                             <select
                                 v-model="form.supervisor_id"
-                                class="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors bg-white"
                             >
                                 <option :value="null">Select Supervisor...</option>
                                 <option v-for="supervisor in supervisors" :key="supervisor.id" :value="supervisor.id">
                                     {{ supervisor.name }} ({{ supervisor.email }})
                                 </option>
                             </select>
-                            <p v-if="form.errors.supervisor_id" class="mt-1 text-sm text-red-600">{{ form.errors.supervisor_id }}</p>
+                            <p v-if="form.errors.supervisor_id" class="mt-2 text-sm text-red-600">{{ form.errors.supervisor_id }}</p>
                         </div>
 
                         <!-- Home Visits Section -->
-                        <div class="border-t pt-4 mt-4">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Home Visits</h3>
+                        <div class="border-t border-gray-200 pt-6 mt-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-5">Home Visits</h3>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label class="mb-2 block text-sm font-medium text-gray-700">Visit Date</label>
+                                    <label class="mb-2.5 block text-sm font-medium text-gray-700">Visit Date</label>
                                     <input
                                         v-model="form.home_visit_date"
                                         type="date"
-                                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors bg-white"
                                     />
-                                    <p v-if="form.errors.home_visit_date" class="mt-1 text-sm text-red-600">{{ form.errors.home_visit_date }}</p>
+                                    <p v-if="form.errors.home_visit_date" class="mt-2 text-sm text-red-600">{{ form.errors.home_visit_date }}</p>
                                 </div>
 
                                 <div>
-                                    <label class="mb-2 block text-sm font-medium text-gray-700">Visit Time</label>
+                                    <label class="mb-2.5 block text-sm font-medium text-gray-700">Visit Time</label>
                                     <input
                                         v-model="form.home_visit_time"
                                         type="time"
-                                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors bg-white"
                                     />
-                                    <p v-if="form.errors.home_visit_time" class="mt-1 text-sm text-red-600">{{ form.errors.home_visit_time }}</p>
+                                    <p v-if="form.errors.home_visit_time" class="mt-2 text-sm text-red-600">{{ form.errors.home_visit_time }}</p>
                                 </div>
                             </div>
 
-                            <div class="mt-4">
-                                <label class="mb-2 block text-sm font-medium text-gray-700">Select Supervisors for Visit</label>
+                            <div class="mt-6">
+                                <label class="mb-2.5 block text-sm font-medium text-gray-700">Select Supervisors for Visit</label>
                                 <select
                                     v-model="selectedHomeVisitSupervisors"
                                     multiple
-                                    class="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[100px]"
+                                    class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors bg-white min-h-[120px]"
                                 >
                                     <option v-for="supervisor in supervisors" :key="supervisor.id" :value="supervisor.id">
                                         {{ supervisor.name }} ({{ supervisor.email }})
                                     </option>
                                 </select>
-                                <p class="mt-1 text-xs text-gray-500">Hold Ctrl/Cmd to select multiple supervisors</p>
-                                <p v-if="form.errors.home_visit_supervisors" class="mt-1 text-sm text-red-600">{{ form.errors.home_visit_supervisors }}</p>
+                                <p class="mt-2 text-xs text-gray-500">Hold Ctrl/Cmd to select multiple supervisors</p>
+                                <p v-if="form.errors.home_visit_supervisors" class="mt-2 text-sm text-red-600">{{ form.errors.home_visit_supervisors }}</p>
                             </div>
                         </div>
 
-                        <div class="flex gap-4 pt-4">
+                        <div class="flex gap-4 pt-4 border-t border-gray-200">
                             <button
                                 type="submit"
-                                class="rounded-lg bg-blue-600 px-6 py-2.5 text-white font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                                class="rounded-lg bg-blue-600 px-6 py-3 text-white font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors shadow-sm hover:shadow-md"
                                 :disabled="form.processing"
                             >
                                 {{ form.processing ? 'Saving...' : 'Save Changes' }}
@@ -513,14 +526,14 @@ const updateWorkStatus = async (newStatus) => {
             </div>
 
             <!-- Quick Stats -->
-            <div class="overflow-hidden rounded-lg bg-white shadow">
-                <div class="px-4 lg:px-6 py-6">
+            <div class="overflow-hidden rounded-lg bg-white shadow-sm border border-gray-200">
+                <div class="px-6 py-6">
                     <h2 class="text-lg font-semibold text-gray-800 mb-6">Quick Actions</h2>
 
                     <div class="space-y-4">
                         <Link
                             :href="route('supervisor.projects.create', { project_id: project.id })"
-                            class="flex items-center justify-between p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors border border-green-200"
+                            class="flex items-center justify-between p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors border border-green-200 hover:border-green-300 hover:shadow-sm"
                         >
                             <span class="text-green-700 font-medium">Create Quote</span>
                             <span class="text-green-500 text-lg">→</span>
@@ -528,6 +541,7 @@ const updateWorkStatus = async (newStatus) => {
                     </div>
                 </div>
             </div>
+        </div>
         </div>
     </AdminLayout>
 </template>

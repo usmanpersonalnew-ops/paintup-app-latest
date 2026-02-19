@@ -59,12 +59,19 @@ class PaymentController extends Controller
                 'paid_at' => now(),
             ]);
 
+        // Refresh project data
+        $project->refresh();
+
         return response()->json([
             'success' => true,
             'message' => 'Cash booking payment confirmed successfully',
             'project' => [
-                'booking_status' => 'PAID',
+                'id' => $project->id,
+                'booking_status' => $project->booking_status,
                 'booking_paid_at' => $project->booking_paid_at,
+                'mid_status' => $project->mid_status,
+                'final_status' => $project->final_status,
+                'status' => $project->status,
             ],
         ]);
     }
@@ -116,9 +123,20 @@ class PaymentController extends Controller
                     'paid_at' => now(),
                 ]);
 
+            // Refresh project data
+            $project->refresh();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Booking cash payment confirmed successfully',
+                'project' => [
+                    'id' => $project->id,
+                    'booking_status' => $project->booking_status,
+                    'booking_paid_at' => $project->booking_paid_at,
+                    'mid_status' => $project->mid_status,
+                    'final_status' => $project->final_status,
+                    'status' => $project->status,
+                ],
             ]);
         }
 
@@ -132,9 +150,16 @@ class PaymentController extends Controller
                 return response()->json(['success' => false, 'message' => 'Mid payment already confirmed']);
             }
 
+            // Check if mid payment is awaiting confirmation (either AWAITING_CONFIRMATION or CASH_PENDING)
+            if (!in_array($project->mid_status, ['AWAITING_CONFIRMATION', 'CASH_PENDING'])) {
+                return response()->json(['success' => false, 'message' => 'Mid payment is not pending cash confirmation'], 400);
+            }
+
             $project->mid_status = 'PAID';
             $project->mid_paid_at = now();
             $project->final_status = 'PENDING';
+            $project->cash_confirmed_by = $user->id;
+            $project->cash_confirmed_at = now();
             $project->save();
 
             // Update milestone payment record
@@ -146,9 +171,20 @@ class PaymentController extends Controller
                     'paid_at' => now(),
                 ]);
 
+            // Refresh project data
+            $project->refresh();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Mid payment cash confirmed successfully',
+                'project' => [
+                    'id' => $project->id,
+                    'mid_status' => $project->mid_status,
+                    'mid_paid_at' => $project->mid_paid_at,
+                    'final_status' => $project->final_status,
+                    'booking_status' => $project->booking_status,
+                    'status' => $project->status,
+                ],
             ]);
         }
 
@@ -162,9 +198,16 @@ class PaymentController extends Controller
                 return response()->json(['success' => false, 'message' => 'Final payment already confirmed']);
             }
 
+            // Check if final payment is awaiting confirmation (either AWAITING_CONFIRMATION or CASH_PENDING)
+            if (!in_array($project->final_status, ['AWAITING_CONFIRMATION', 'CASH_PENDING'])) {
+                return response()->json(['success' => false, 'message' => 'Final payment is not pending cash confirmation'], 400);
+            }
+
             $project->final_status = 'PAID';
             $project->final_paid_at = now();
             $project->status = 'COMPLETED';
+            $project->cash_confirmed_by = $user->id;
+            $project->cash_confirmed_at = now();
             $project->save();
 
             // Update milestone payment record
@@ -176,9 +219,20 @@ class PaymentController extends Controller
                     'paid_at' => now(),
                 ]);
 
+            // Refresh project data
+            $project->refresh();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Final payment cash confirmed. Project completed!',
+                'project' => [
+                    'id' => $project->id,
+                    'final_status' => $project->final_status,
+                    'final_paid_at' => $project->final_paid_at,
+                    'mid_status' => $project->mid_status,
+                    'booking_status' => $project->booking_status,
+                    'status' => $project->status,
+                ],
             ]);
         }
 

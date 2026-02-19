@@ -78,7 +78,8 @@ const confirmCashPayment = (milestone) => {
     form.post(route('admin.projects.confirm-cash', props.project.id), {
         data: { milestone },
         onSuccess: () => {
-            window.location.reload();
+            // Use Inertia router to reload with fresh data
+            router.reload({ only: ['project'] });
         },
         onFinish: () => {
             processingCashConfirm.value = false;
