@@ -11,6 +11,7 @@ class MasterSurface extends Model
         'name',
         'category',
         'unit_type',
+        'remarks',
     ];
 
     public function products(): BelongsToMany

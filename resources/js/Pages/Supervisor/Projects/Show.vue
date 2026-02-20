@@ -77,18 +77,19 @@ const updateWorkStatus = async (newStatus) => {
     processingWorkStatus.value = true;
 
     try {
-        const res = await axios.post(`/supervisor/projects/${props.project.id}/work-status`, {
+        const res = await axios.post(route('supervisor.projects.work-status', props.project.id), {
             work_status: newStatus
         });
 
         if (res.data.success || !res.data.error) {
+            // Refresh entire page
             window.location.reload();
         } else {
             alert(res.data.message || res.data.error || 'Failed to update work status');
+            processingWorkStatus.value = false;
         }
     } catch (e) {
         alert(e.response?.data?.message || e.response?.data?.error || 'An error occurred');
-    } finally {
         processingWorkStatus.value = false;
     }
 };
@@ -154,9 +155,13 @@ const isMidPaymentPaid = () => props.project.mid_status === 'PAID';
 const isFinalPaymentPaid = () => props.project.final_status === 'PAID';
 const isCashPayment = () => props.project.payment_method === 'CASH';
 const isBookingCashPending = () => props.project.booking_status === 'CASH_PENDING';
+const isMidCashPending = () => props.project.mid_status === 'CASH_PENDING';
+const isFinalCashPending = () => props.project.final_status === 'CASH_PENDING';
 const canConfirmCash = () => isCashPayment() && isBookingCashPending();
-const canCollectMidPayment = () => isBookingPaid() && !isMidPaymentPaid();
-const canCollectFinalPayment = () => isMidPaymentPaid() && !isFinalPaymentPaid();
+const canConfirmMidCash = () => isCashPayment() && isMidCashPending();
+const canConfirmFinalCash = () => isCashPayment() && isFinalCashPending();
+const canCollectMidPayment = () => isBookingPaid() && !isMidPaymentPaid() && !isMidCashPending();
+const canCollectFinalPayment = () => isMidPaymentPaid() && !isFinalPaymentPaid() && !isFinalCashPending();
 
 // Confirm cash booking payment
 const confirmCashBooking = async () => {
@@ -165,64 +170,71 @@ const confirmCashBooking = async () => {
     processingCashConfirm.value = true;
 
     try {
-        const res = await axios.post(`/supervisor/projects/${props.project.id}/confirm-cash-booking`, {});
+        const res = await axios.post(route('supervisor.projects.confirm-cash-booking', props.project.id), {});
 
         if (res.data.success) {
-            // Use Inertia router to reload with fresh data
-            router.reload({ only: ['project'] });
+            // Refresh entire page
+            window.location.reload();
         } else {
             alert(res.data.message || 'Failed to confirm cash payment');
+            processingCashConfirm.value = false;
         }
     } catch (e) {
-        alert(e.response?.data?.message || 'An error occurred');
-    } finally {
+        alert(e.response?.data?.message || e.message || 'An error occurred');
         processingCashConfirm.value = false;
     }
 };
 
 // Confirm cash payment for milestone
-const confirmCashPayment = (milestone) => {
-    if (!confirm(`Confirm ${milestone} cash payment received from customer?`)) return;
+const confirmCashPayment = async (milestone) => {
+    const milestoneLabel = milestone === 'mid' ? 'Mid' : 'Final';
+    if (!confirm(`Confirm ${milestoneLabel} cash payment received from customer?`)) return;
 
     processingCashConfirm.value = true;
 
-    form.post(route('supervisor.projects.confirm-cash', props.project.id), {
-        data: { milestone },
-        onSuccess: () => {
-            // Use Inertia router to reload with fresh data
-            router.reload({ only: ['project'] });
-        },
-        onFinish: () => {
+    try {
+        const res = await axios.post(route('supervisor.projects.confirm-cash', props.project.id), {
+            milestone: milestone
+        });
+
+        if (res.data.success || !res.data.error) {
+            // Refresh entire page
+            window.location.reload();
+        } else {
+            alert(res.data.message || res.data.error || 'Failed to confirm cash payment');
             processingCashConfirm.value = false;
-        },
-    });
+        }
+    } catch (e) {
+        alert(e.response?.data?.message || e.response?.data?.error || 'An error occurred');
+        processingCashConfirm.value = false;
+    }
 };
 
 // Collect mid/final payment
 const collectPayment = async (type) => {
     const milestone = type === 'mid' ? 'mid' : 'final';
+    const milestoneLabel = milestone === 'mid' ? 'Mid' : 'Final';
     const paymentMethod = props.project.payment_method === 'CASH' ? 'CASH' : 'ONLINE';
-    if (!confirm(`Confirm ${milestone} payment collected via ${paymentMethod}?`)) return;
+
+    if (!confirm(`Confirm ${milestoneLabel} payment collected via ${paymentMethod}?`)) return;
 
     processingCashConfirm.value = true;
 
     try {
-        const res = await axios.post(`/supervisor/projects/${props.project.id}/collect-${milestone}`, {
+        const routeName = milestone === 'mid' ? 'supervisor.projects.collect-mid' : 'supervisor.projects.collect-final';
+        const res = await axios.post(route(routeName, props.project.id), {
             payment_method: paymentMethod
         });
 
         if (res.data.success) {
-            // Reload the page to update the project data
-            router.visit(window.location.pathname, {
-                preserveState: false,
-                preserveScroll: false,
-            });
+            // Refresh entire page
+            window.location.reload();
         } else {
             alert(res.data.message || 'Failed to collect payment');
             processingCashConfirm.value = false;
         }
     } catch (e) {
-        alert(e.response?.data?.message || 'An error occurred');
+        alert(e.response?.data?.message || e.message || 'An error occurred');
         processingCashConfirm.value = false;
     }
 };
@@ -296,9 +308,19 @@ const collectPayment = async (type) => {
                     v-if="canCollectMidPayment()"
                     @click="collectPayment('mid')"
                     :disabled="processingCashConfirm"
-                    class="mt-2 w-full h-10 bg-white text-blue-600 rounded-lg font-bold text-sm hover:bg-blue-50 disabled:opacity-50"
+                    class="mt-2 w-full h-10 bg-white text-blue-600 rounded-lg font-bold text-sm hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
                     {{ processingCashConfirm ? 'Processing...' : '💰 Collect Mid Payment' }}
+                </button>
+
+                <!-- Confirm Mid Cash Payment Button -->
+                <button
+                    v-if="canConfirmMidCash()"
+                    @click="confirmCashPayment('mid')"
+                    :disabled="processingCashConfirm"
+                    class="mt-2 w-full h-10 bg-orange-500 text-white rounded-lg font-bold text-sm hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                    {{ processingCashConfirm ? 'Processing...' : '✓ Confirm Mid Cash Payment' }}
                 </button>
 
                 <!-- Collect Final Payment Button -->
@@ -306,9 +328,19 @@ const collectPayment = async (type) => {
                     v-if="canCollectFinalPayment()"
                     @click="collectPayment('final')"
                     :disabled="processingCashConfirm"
-                    class="mt-2 w-full h-10 bg-white text-purple-600 rounded-lg font-bold text-sm hover:bg-purple-50 disabled:opacity-50"
+                    class="mt-2 w-full h-10 bg-white text-purple-600 rounded-lg font-bold text-sm hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
                     {{ processingCashConfirm ? 'Processing...' : '💰 Collect Final Payment' }}
+                </button>
+
+                <!-- Confirm Final Cash Payment Button -->
+                <button
+                    v-if="canConfirmFinalCash()"
+                    @click="confirmCashPayment('final')"
+                    :disabled="processingCashConfirm"
+                    class="mt-2 w-full h-10 bg-orange-500 text-white rounded-lg font-bold text-sm hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                    {{ processingCashConfirm ? 'Processing...' : '✓ Confirm Final Cash Payment' }}
                 </button>
 
                 <!-- Cash Confirmed By Info -->
@@ -366,7 +398,7 @@ const collectPayment = async (type) => {
 
         <div class="p-4 max-w-2xl mx-auto">
             <!-- Manual Payment Actions for Supervisor -->
-            <div v-if="project.booking_status === 'PAID'" class="mt-3 bg-gray-800 p-3 rounded-lg">
+            <!-- <div v-if="project.booking_status === 'PAID'" class="mt-3 bg-gray-800 p-3 rounded-lg">
                 <p class="text-xs font-medium mb-2 text-gray-300">💳 Manual Payment Actions</p>
                 <div class="flex flex-wrap gap-2">
                     <button
@@ -386,7 +418,7 @@ const collectPayment = async (type) => {
                         {{ processingCashConfirm ? 'Processing...' : 'Mark Final PAID' }}
                     </button>
                 </div>
-            </div>
+            </div> -->
         </div>
 
         <div class="p-4 max-w-2xl mx-auto">

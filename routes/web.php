@@ -255,6 +255,9 @@ Route::middleware(['auth:customer'])->prefix('customer')->name('customer.')->gro
 
     // Quote View (Authenticated - no token needed, uses session)
     Route::get('/quote/{project}', [\App\Http\Controllers\Customer\CustomerQuoteController::class, 'show'])->name('quote.show');
+    
+    // Send SMS/WhatsApp Quote
+    Route::post('/quote/{project}/send-sms', [\App\Http\Controllers\Customer\CustomerQuoteController::class, 'sendSMS'])->name('quote.send-sms');
 
     // Progress Photos (Authenticated - no token needed)
     Route::get('/project/{project}/photos', [\App\Http\Controllers\Customer\ProjectPhotoController::class, 'show'])->name('project.photos');

@@ -27,6 +27,7 @@ class SurfaceController extends Controller
             'name' => 'required|string|max:255',
             'category' => 'required|string',
             'unit_type' => 'required|string',
+            'remarks' => 'nullable|string|max:1000',
         ]);
 
         MasterSurface::create($request->all());
@@ -49,6 +50,7 @@ class SurfaceController extends Controller
             'name' => 'required|string|max:255',
             'category' => 'required|string',
             'unit_type' => 'required|string',
+            'remarks' => 'nullable|string|max:1000',
         ]);
 
         $surface->update($request->all());

@@ -29,7 +29,7 @@ const submit = () => {
 </script>
 
 <template>
-    <AdminLayout>
+    <AdminLayout class="container mx-auto max-w-4xl">
         <div class="mb-6">
             <Link
                 :href="route('admin.projects.index')"
@@ -39,12 +39,12 @@ const submit = () => {
             </Link>
         </div>
 
-        <div class="mb-6">
+        <div class="mb-6 text-center">
             <h1 class="text-2xl font-bold text-gray-800">Create New Project</h1>
             <p class="text-sm text-gray-500">Create a new home visit project.</p>
         </div>
 
-        <div class="max-w-2xl overflow-hidden rounded-lg bg-white shadow">
+        <div class="max-w-2xl overflow-hidden rounded-lg bg-white shadow mx-auto">
             <div class="px-6 py-8">
                 <form @submit.prevent="submit" class="space-y-4">
                     <div>
@@ -139,7 +139,7 @@ const submit = () => {
                             </div>
                         </div>
 
-                        <div class="mt-4">
+                        <!-- <div class="mt-4">
                             <label class="mb-2 block text-sm font-medium text-gray-700">Select Supervisors for Visit</label>
                             <select
                                 v-model="selectedHomeVisitSupervisors"
@@ -152,7 +152,7 @@ const submit = () => {
                             </select>
                             <p class="mt-1 text-xs text-gray-500">Hold Ctrl/Cmd to select multiple supervisors</p>
                             <p v-if="form.errors.home_visit_supervisors" class="mt-1 text-sm text-red-600">{{ form.errors.home_visit_supervisors }}</p>
-                        </div>
+                        </div> -->
                     </div>
 
                     <div class="flex gap-4 pt-4">

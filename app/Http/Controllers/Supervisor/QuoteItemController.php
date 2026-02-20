@@ -26,7 +26,7 @@ class QuoteItemController extends Controller
         // This ensures frontend can deterministically handle surfaces with/without products
         $surfaces = $surfaces->map(function ($surface) {
             $hasProducts = $surface->products->isNotEmpty();
-            
+
             return [
                 'id' => $surface->id,
                 'name' => $surface->name,
@@ -58,6 +58,7 @@ class QuoteItemController extends Controller
             'pricing_mode' => 'nullable|in:CALCULATED,LUMPSUM',
             'lumpsum_amount' => 'nullable|numeric|min:0',
             'manual_deduction_sqft' => 'nullable|numeric|min:0',
+            'remarks' => 'nullable|string|max:1000',
         ]);
 
         // Get the painting system for rate calculation
@@ -66,7 +67,7 @@ class QuoteItemController extends Controller
         // Calculate quantities based on measurement source
         $grossQty = $this->calculateGrossQty($request, $projectRoom);
         $deductions = $this->parseDeductions($request->deductions);
-        
+
         // Add manual deduction to total
         $manualDeduction = $request->manual_deduction_sqft ?? 0;
         $netQty = $grossQty - $deductions['total_area'] - $manualDeduction;
@@ -91,6 +92,7 @@ class QuoteItemController extends Controller
             'deductions' => $deductions['json'],
             'color_code' => $request->color ?? null,
             'description' => $request->description ?? null,
+            'remarks' => $request->remarks ?? null,
             'manual_price' => $pricingMode === 'LUMPSUM' ? ($request->lumpsum_amount ?? 0) : 0,
             'gross_qty' => $grossQty,
             'net_qty' => $netQty,
@@ -118,7 +120,7 @@ class QuoteItemController extends Controller
         // Harden: Add explicit has_products flag to each surface
         $surfaces = $surfaces->map(function ($surface) {
             $hasProducts = $surface->products->isNotEmpty();
-            
+
             return [
                 'id' => $surface->id,
                 'name' => $surface->name,
@@ -154,6 +156,7 @@ class QuoteItemController extends Controller
             'pricing_mode' => 'nullable|in:CALCULATED,LUMPSUM',
             'lumpsum_amount' => 'nullable|numeric|min:0',
             'manual_deduction_sqft' => 'nullable|numeric|min:0',
+            'remarks' => 'nullable|string|max:1000',
         ]);
 
         // Get the painting system for rate calculation
@@ -162,7 +165,7 @@ class QuoteItemController extends Controller
         // Calculate quantities based on measurement source
         $grossQty = $this->calculateGrossQty($request, $projectRoom);
         $deductions = $this->parseDeductions($request->deductions);
-        
+
         // Add manual deduction to total
         $manualDeduction = $request->manual_deduction_sqft ?? 0;
         $netQty = $grossQty - $deductions['total_area'] - $manualDeduction;
@@ -187,6 +190,7 @@ class QuoteItemController extends Controller
             'deductions' => $deductions['json'],
             'color_code' => $request->color ?? null,
             'description' => $request->description ?? null,
+            'remarks' => $request->remarks ?? null,
             'manual_price' => $pricingMode === 'LUMPSUM' ? ($request->lumpsum_amount ?? 0) : 0,
             'gross_qty' => $grossQty,
             'net_qty' => $netQty,

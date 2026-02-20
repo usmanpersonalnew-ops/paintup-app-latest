@@ -9,6 +9,7 @@ const form = useForm({
     name: props.surface.name,
     category: props.surface.category,
     unit_type: props.surface.unit_type,
+    remarks: props.surface.remarks || '',
 });
 
 const submit = () => {
@@ -79,6 +80,18 @@ const submit = () => {
                             Note: Changing this will change how the app calculates price for this item.
                         </p>
                         <p v-if="form.errors.unit_type" class="mt-1 text-sm text-red-600">{{ form.errors.unit_type }}</p>
+                    </div>
+
+                    <div>
+                        <label for="remarks" class="block text-sm font-medium text-gray-700">Remarks (Optional)</label>
+                        <textarea
+                            id="remarks"
+                            v-model="form.remarks"
+                            rows="3"
+                            class="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            placeholder="Add any notes or remarks about this surface..."
+                        ></textarea>
+                        <p v-if="form.errors.remarks" class="mt-1 text-sm text-red-600">{{ form.errors.remarks }}</p>
                     </div>
 
                     <div class="flex justify-end gap-3">

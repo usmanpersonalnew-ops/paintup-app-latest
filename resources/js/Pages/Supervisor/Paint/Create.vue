@@ -46,6 +46,8 @@ const form = useForm({
     pricing_mode: 'CALCULATED',
     // Description
     description: '',
+    // Remarks
+    remarks: '',
 });
 
 // Pre-fill form with edit data
@@ -60,6 +62,7 @@ onMounted(() => {
         form.pricing_mode = item.pricing_mode || 'CALCULATED';
         form.color = item.color_code || '';
         form.description = item.description || '';
+        form.remarks = item.remarks || '';
         form.manual_deduction_sqft = item.manual_deduction_sqft || 0;
 
         // Parse deductions if stored as JSON string
@@ -318,6 +321,8 @@ const submit = () => {
         pricing_mode: form.pricing_mode,
         // Description
         description: form.description || null,
+        // Remarks
+        remarks: form.remarks || null,
     };
 
     if (isEditMode.value) {
@@ -714,7 +719,18 @@ const submit = () => {
                 </div>
             </div>
 
-            <!-- 9) PRICING SUMMARY -->
+            <!-- 9) REMARKS -->
+            <div v-if="form.system_id" class="bg-white p-4 rounded shadow">
+                <h3 class="font-bold border-b pb-2 mb-3">9. REMARKS</h3>
+                <textarea
+                    v-model="form.remarks"
+                    rows="3"
+                    class="w-full border border-gray-300 rounded p-3 mt-1"
+                    placeholder="Add any notes or remarks about this item (optional)..."
+                ></textarea>
+            </div>
+
+            <!-- 10) PRICING SUMMARY -->
             <div v-if="form.system_id" class="bg-green-50 p-4 rounded shadow border-2 border-green-200">
                 <h3 class="font-bold text-green-800 mb-3">PRICING SUMMARY</h3>
 
@@ -751,7 +767,7 @@ const submit = () => {
                 </div>
             </div>
 
-            <!-- 10) SAVE ACTION -->
+            <!-- 11) SAVE ACTION -->
             <button
                 type="submit"
                 :disabled="!form.system_id"

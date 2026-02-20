@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Project;
+use App\Services\Msg91WhatsappService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -106,5 +107,62 @@ class CustomerQuoteController extends Controller
             'isLoggedIn' => $isLoggedIn,
             'notes' => $notes,
         ]);
+    }
+
+    /**
+     * Send SMS/WhatsApp quote to customer's own phone
+     */
+    public function sendSMS($projectId)
+    {
+        // Get authenticated customer
+        $customer = Auth::guard('customer')->user();
+
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+
+        // Find project and verify ownership by phone number
+        $project = Project::where('id', $projectId)
+            ->where('phone', $customer->phone)
+            ->first();
+
+        if (!$project) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Quote not found or access denied'
+            ], 404);
+        }
+
+        $customerName = $project->client_name;
+        $customerPhone = $project->phone;
+
+        if (!$customerPhone) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Customer phone number not found.'
+            ], 422);
+        }
+
+        $msg91Service = new Msg91WhatsappService();
+
+        $sent = $msg91Service->sendQuoteSharedMessage(
+            $customerPhone,
+            $customerName
+        );
+
+        if ($sent) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Quote sent to your WhatsApp successfully!'
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to send WhatsApp message. Please try again.'
+        ], 500);
     }
 }

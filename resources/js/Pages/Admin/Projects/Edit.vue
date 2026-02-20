@@ -298,44 +298,7 @@ const updateWorkStatus = async (newStatus) => {
                     </div>
                 </div>
 
-                <!-- Admin Manual Payment Actions -->
-                <div class="mt-6 pt-6 border-t border-gray-200">
-                    <p class="text-sm font-semibold text-gray-700 mb-4">Admin Manual Actions:</p>
-                    <div class="flex flex-wrap gap-3">
-                        <button
-                            v-if="project.booking_status !== 'PAID'"
-                            @click="markBookingPaid"
-                            :disabled="processing['booking']"
-                            class="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 disabled:opacity-50 transition-colors"
-                        >
-                            {{ processing['booking'] ? '...' : 'Mark Booking PAID' }}
-                        </button>
-                        <button
-                            v-if="project.booking_status === 'PAID' && project.mid_status !== 'PAID'"
-                            @click="markMidPaid"
-                            :disabled="processing['mid']"
-                            class="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 disabled:opacity-50 transition-colors"
-                        >
-                            {{ processing['mid'] ? '...' : 'Mark Mid PAID' }}
-                        </button>
-                        <button
-                            v-if="project.mid_status === 'PAID' && project.final_status !== 'PAID'"
-                            @click="markFinalPaid"
-                            :disabled="processing['final']"
-                            class="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 disabled:opacity-50 transition-colors"
-                        >
-                            {{ processing['final'] ? '...' : 'Mark Final PAID' }}
-                        </button>
-                        <button
-                            v-if="project.payment_method === 'CASH' && project.booking_status === 'AWAITING_CONFIRMATION'"
-                            @click="confirmCashPayment('booking')"
-                            :disabled="processing['booking']"
-                            class="px-4 py-2 bg-orange-50 text-orange-700 rounded-lg text-sm font-medium hover:bg-orange-100 disabled:opacity-50 transition-colors"
-                        >
-                            {{ processing['booking'] ? '...' : 'Confirm Cash Booking' }}
-                        </button>
-                    </div>
-                </div>
+
             </div>
         </div>
 
@@ -496,7 +459,7 @@ const updateWorkStatus = async (newStatus) => {
                                 </div>
                             </div>
 
-                            <div class="mt-6">
+                            <!-- <div class="mt-6">
                                 <label class="mb-2.5 block text-sm font-medium text-gray-700">Select Supervisors for Visit</label>
                                 <select
                                     v-model="selectedHomeVisitSupervisors"
@@ -509,7 +472,7 @@ const updateWorkStatus = async (newStatus) => {
                                 </select>
                                 <p class="mt-2 text-xs text-gray-500">Hold Ctrl/Cmd to select multiple supervisors</p>
                                 <p v-if="form.errors.home_visit_supervisors" class="mt-2 text-sm text-red-600">{{ form.errors.home_visit_supervisors }}</p>
-                            </div>
+                            </div> -->
                         </div>
 
                         <div class="flex gap-4 pt-4 border-t border-gray-200">

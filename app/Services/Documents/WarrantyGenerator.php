@@ -3,8 +3,6 @@
 namespace App\Services\Documents;
 
 use App\Models\Project;
-use App\Models\QuoteItem;
-use App\Models\MasterPaintingSystem;
 use Illuminate\Support\Facades\DB;
 
 class WarrantyGenerator
@@ -33,10 +31,13 @@ class WarrantyGenerator
         // Get settings
         $settings = $this->getSettings();
 
+        // Calculate valid_till date (clone to avoid mutating original)
+        $validTill = $completionDate ? (clone $completionDate)->addYears(1)->format('d M Y') : null;
+
         return [
             'certificate_number' => $certificateNumber,
             'issue_date' => $completionDate?->format('d M Y'),
-            'valid_till' => $completionDate?->addYears(1)->format('d M Y'),
+            'valid_till' => $validTill,
             'project' => $project,
             'warranty_items' => $warrantyItems,
             'settings' => $settings,
@@ -74,12 +75,23 @@ class WarrantyGenerator
 
         foreach ($project->rooms as $room) {
             foreach ($room->items as $item) {
-                $surfaceName = $item->surface->name ?? 'Unknown Surface';
-                $productName = $item->product->name ?? 'Unknown Product';
-                $systemName = $item->system->system_name ?? 'Unknown System';
+                $surfaceName = $item->surface?->name ?? 'Unknown Surface';
+                $productName = $item->product?->name ?? 'Unknown Product';
 
-                // Get warranty months from system, fallback to product
-                $warrantyMonths = $this->getWarrantyMonths($item);
+                // Get system with fallback
+                $system = $item->system;
+
+                // If system is missing but product exists, try to get first system from product
+                if (!$system && $item->product) {
+                    $item->product->load('systems');
+                    $system = $item->product->systems->first();
+                }
+
+                $systemName = $system?->system_name ?? 'Unknown System';
+
+                // Get warranty months from system
+                $warrantyMonths = $system?->warranty_months ?? 0;
+                $warrantyMonths = $warrantyMonths > 0 ? (int) $warrantyMonths : 0;
 
                 $key = $room->name . '|' . $surfaceName . '|' . $productName . '|' . $systemName . '|' . $warrantyMonths;
 
@@ -101,26 +113,4 @@ class WarrantyGenerator
         return array_values($grouped);
     }
 
-    /**
-     * Get warranty months for an item
-     */
-    protected function getWarrantyMonths(QuoteItem $item): int
-    {
-        // First try to get from painting system
-        if ($item->system && $item->system instanceof MasterPaintingSystem) {
-            return (int) ($item->system->warranty_months ?? 0);
-        }
-
-        // Fallback: check system relationship if loaded differently
-        if ($item->system) {
-            return (int) ($item->system->warranty_months ?? 0);
-        }
-
-        // Try to get from product
-        if ($item->product) {
-            return (int) ($item->product->warranty_months ?? 0);
-        }
-
-        return 0;
-    }
 }

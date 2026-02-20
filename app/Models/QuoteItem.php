@@ -23,6 +23,7 @@ class QuoteItem extends Model
         'deductions',
         'color_code',
         'description',
+        'remarks',
         'manual_price',
         'gross_qty',
         'net_qty',
