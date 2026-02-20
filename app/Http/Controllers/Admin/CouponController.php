@@ -101,7 +101,7 @@ class CouponController extends Controller
     public function edit(Coupon $coupon, Request $request)
     {
         // Check if coupon has been used in any project with payment
-        $hasUsage = $coupon->projects()->whereNotNull('booking_payment_at')->exists();
+        $hasUsage = $coupon->projects()->whereNotNull('booking_paid_at')->exists();
 
         return Inertia::render('Admin/Coupons/Edit', [
             'coupon' => $coupon,
