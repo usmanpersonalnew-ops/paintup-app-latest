@@ -56,4 +56,11 @@ class SurfaceController extends Controller
         $surface->update($request->all());
         return redirect()->route('admin.surfaces.index');
     }
+
+    public function destroy($id)
+    {
+        $surface = MasterSurface::findOrFail($id);
+        $surface->delete();
+        return redirect()->route('admin.surfaces.index');
+    }
 }

@@ -1,5 +1,5 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 
 defineProps({
@@ -14,6 +14,12 @@ const unitTypeLabels = {
     LINEAR: 'Linear (Length)',
     COUNT: 'Count (Quantity)',
     LUMPSUM: 'Lumpsum',
+};
+
+const deleteSurface = (id) => {
+    if (confirm('Are you sure you want to delete this surface?')) {
+        router.delete(route('admin.surfaces.destroy', id));
+    }
 };
 </script>
 
@@ -83,12 +89,21 @@ const unitTypeLabels = {
                                 </span>
                             </td>
                             <td class="whitespace-nowrap px-6 py-4">
-                                <Link
-                                    :href="`/admin/surfaces/${surface.id}/edit`"
-                                    class="text-blue-600 hover:text-blue-900"
-                                >
-                                    Edit
-                                </Link>
+                                <div class="flex items-center gap-3">
+                                    <Link
+                                        :href="`/admin/surfaces/${surface.id}/edit`"
+                                        class="text-blue-600 hover:text-blue-900"
+                                    >
+                                        Edit
+                                    </Link>
+                                    <button
+                                        type="button"
+                                        @click="deleteSurface(surface.id)"
+                                        class="text-red-600 hover:text-red-900"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
