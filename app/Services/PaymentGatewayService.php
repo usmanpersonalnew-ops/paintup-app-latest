@@ -176,7 +176,7 @@ class PaymentGatewayService
 
         $isSandbox = $config['environment'] === 'sandbox';
         $baseUrl = $isSandbox
-            ? 'https://test.ccavenue.com/apis/servlet/DoWebTrans'
+            ? 'https://secure.ccavenue.com/apis/servlet/DoWebTrans'
             : 'https://secure.ccavenue.com/apis/servlet/DoWebTrans';
 
         return [

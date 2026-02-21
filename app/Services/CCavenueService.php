@@ -178,7 +178,7 @@ class CCavenueService
 
         // Use test URL for test mode, live URL for production
         $baseUrl = $this->env === 'test'
-            ? 'https://test.ccavenue.com/transaction/transaction.do?command=initiateTransaction'
+            ? 'https://secure.ccavenue.com/transaction/transaction.do?command=initiateTransaction'
             : 'https://secure.ccavenue.com/transaction/transaction.do?command=initiateTransaction';
 
         $paymentUrl = $baseUrl . '&encRequest=' . urlencode($encRequest) . '&access_code=' . urlencode($this->accessCode);
@@ -199,7 +199,7 @@ class CCavenueService
     public function getPaymentBaseUrl(): string
     {
         return $this->env === 'test'
-            ? 'https://test.ccavenue.com'
+            ? 'https://secure.ccavenue.com'
             : 'https://secure.ccavenue.com';
     }
 
