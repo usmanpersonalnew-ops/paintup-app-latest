@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, usePage } from '@inertiajs/vue3';
 import SupervisorLayout from '@/Layouts/SupervisorLayout.vue';
 
 defineOptions({
@@ -12,10 +12,15 @@ const props = defineProps({
   photos: Array,
 });
 
+const page = usePage();
 const isUploading = ref(false);
 const selectedFiles = ref([]);
 const selectedStage = ref('before');
 const fileInput = ref(null);
+const uploadError = ref('');
+
+const flashSuccess = computed(() => page.props.flash?.success ?? null);
+const flashError = computed(() => page.props.flash?.error ?? null);
 
 const form = useForm({
   photos: [],
@@ -42,11 +47,10 @@ const uploadPhotos = () => {
   if (selectedFiles.value.length === 0) return;
 
   isUploading.value = true;
+  uploadError.value = '';
 
-  // Update form with current stage
   form.stage = selectedStage.value;
 
-  // Use forceFormData for file uploads
   form.post(route('supervisor.photos.store', props.project.id), {
     forceFormData: true,
     onSuccess: () => {
@@ -54,14 +58,18 @@ const uploadPhotos = () => {
       form.photos = [];
       form.stage = 'before';
       selectedStage.value = 'before';
-      // Reset file input
+      uploadError.value = '';
       if (fileInput.value) {
         fileInput.value.value = '';
       }
       isUploading.value = false;
     },
     onError: (errors) => {
-      console.error('Upload errors:', errors);
+      const messages = Object.keys(errors).map(key => {
+        const msg = Array.isArray(errors[key]) ? errors[key][0] : errors[key];
+        return msg;
+      });
+      uploadError.value = messages.length ? messages.join(' ') : 'Upload failed. Please check file types (JPEG, PNG, JPG, GIF) and size (max 10MB).';
       isUploading.value = false;
     },
     onFinish: () => {
@@ -156,6 +164,20 @@ const activeTab = ref('before');
         >
           ← Back to Summary
         </a>
+      </div>
+
+      <!-- Flash messages (success / error from server) -->
+      <div v-if="flashSuccess" class="rounded-lg bg-green-50 border border-green-200 p-4 text-green-800 text-sm">
+        {{ flashSuccess }}
+      </div>
+      <div v-if="flashError" class="rounded-lg bg-red-50 border border-red-200 p-4 text-red-800 text-sm">
+        {{ flashError }}
+      </div>
+
+      <!-- Upload error (validation or request error) -->
+      <div v-if="uploadError" class="rounded-lg bg-red-50 border border-red-200 p-4">
+        <p class="text-sm font-medium text-red-800">Upload error</p>
+        <p class="mt-1 text-sm text-red-700">{{ uploadError }}</p>
       </div>
 
       <!-- Upload Section -->

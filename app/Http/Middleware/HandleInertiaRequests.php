@@ -50,6 +50,10 @@ class HandleInertiaRequests extends Middleware
                 'customer' => Auth::guard('customer')->check() ? Auth::guard('customer')->user() : null,
             ],
             'branding' => $branding,
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
+            ],
         ];
     }
 }

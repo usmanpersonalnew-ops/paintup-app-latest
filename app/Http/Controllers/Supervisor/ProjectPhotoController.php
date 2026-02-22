@@ -57,9 +57,16 @@ class ProjectPhotoController extends Controller
         Log::info('Has photos input: ' . ($request->has('photos') ? 'yes' : 'no'));
         
         // Validate
-        $validation = $request->validate([
+        $request->validate([
+            'photos' => 'required|array|min:1',
             'photos.*' => 'required|image|mimes:jpeg,png,jpg,gif|max:10240', // 10MB max
             'stage' => 'required|in:before,in-progress,after',
+        ], [
+            'photos.required' => 'Please select at least one photo to upload.',
+            'photos.min' => 'Please select at least one photo to upload.',
+            'photos.*.image' => 'Each file must be an image (JPEG, PNG, JPG or GIF).',
+            'photos.*.mimes' => 'Each file must be JPEG, PNG, JPG or GIF.',
+            'photos.*.max' => 'Each image must be 10MB or smaller.',
         ]);
         
         Log::info('Validation passed');
