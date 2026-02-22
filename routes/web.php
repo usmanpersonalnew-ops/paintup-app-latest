@@ -272,6 +272,9 @@ Route::middleware(['auth:customer'])->prefix('customer')->name('customer.')->gro
     // Dedicated Payment Page (Checkout Style)
     Route::get('/payment/{project}/{milestone}', [\App\Http\Controllers\Customer\CustomerPaymentController::class, 'showPaymentPage'])->name('payment.page');
 
+    // Online payment callback (PhonePe/other gateways redirect here)
+    Route::match(['get', 'post'], '/payment/callback', [\App\Http\Controllers\Customer\CustomerPaymentController::class, 'paymentCallback'])->name('payment.callback');
+
     // Cash Payment Success Page
     Route::get('/payment/success/{project}/{milestone}', [\App\Http\Controllers\Customer\CustomerPaymentController::class, 'paymentSuccess'])->name('payment.cash-success');
 

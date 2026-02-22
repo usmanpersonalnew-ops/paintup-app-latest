@@ -360,31 +360,11 @@ class ProjectController extends Controller
             ? \Carbon\Carbon::parse($project->home_visit_time)->format('h:i A')
             : 'Not scheduled';
 
-        // Get supervisor names
-        $supervisorNames = 'Not assigned';
-        if ($project->home_visit_supervisors) {
-            $supervisorIds = json_decode($project->home_visit_supervisors, true);
-            if (is_array($supervisorIds) && !empty($supervisorIds)) {
-                $supervisors = \App\Models\User::whereIn('id', $supervisorIds)
-                    ->pluck('name')
-                    ->toArray();
-                $supervisorNames = implode(', ', $supervisors);
-            } elseif ($project->supervisor_id) {
-                $supervisor = \App\Models\User::find($project->supervisor_id);
-                $supervisorNames = $supervisor ? $supervisor->name : 'Not assigned';
-            }
-        } elseif ($project->supervisor_id) {
-            $supervisor = \App\Models\User::find($project->supervisor_id);
-            $supervisorNames = $supervisor ? $supervisor->name : 'Not assigned';
-        }
-
-        // Prepare template values
-        // body_1: Date
-        // body_2: Time
-        // body_3: Supervisor names
-        $value1 = $visitDate;
-        $value2 = $visitTime;
-        $value3 = $supervisorNames;
+        // Prepare template values for: "Hi {{1}}, your home visit is scheduled on {{2}} at {{3}}. Our supervisor will contact you shortly."
+        // {{1}} = Customer Name, {{2}} = Date, {{3}} = Time
+        $value1 = $project->client_name ?: 'Customer';
+        $value2 = $visitDate;
+        $value3 = $visitTime;
 
         try {
             $msg91Service = new Msg91WhatsappService();

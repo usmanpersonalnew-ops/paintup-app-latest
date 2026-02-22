@@ -8,18 +8,31 @@ use App\Models\MilestonePayment;
 use App\Models\Project;
 use App\Models\Setting;
 use App\Services\CCavenueService;
+use App\Services\PaymentGatewayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class CustomerPaymentController extends Controller
 {
     protected $ccavenue;
 
-    public function __construct(CCavenueService $ccavenue)
+    protected $paymentGateway;
+
+    public function __construct(CCavenueService $ccavenue, PaymentGatewayService $paymentGateway)
     {
         $this->ccavenue = $ccavenue;
+        $this->paymentGateway = $paymentGateway;
+    }
+
+    /**
+     * Check if PhonePe is enabled
+     */
+    protected function isPhonePeEnabled(): bool
+    {
+        return env('PHONEPE_ENABLED', false) === true || env('PHONEPE_ENABLED', false) === 'true';
     }
 
     /**
@@ -28,6 +41,31 @@ class CustomerPaymentController extends Controller
     protected function isCcavenueEnabled(): bool
     {
         return env('CCAVENUE_ENABLED', false) === true || env('CCAVENUE_ENABLED', false) === 'true';
+    }
+
+    /**
+     * Check if any online payment gateway is enabled
+     */
+    protected function isOnlinePaymentEnabled(): bool
+    {
+        return $this->isPhonePeEnabled() || $this->isCcavenueEnabled();
+    }
+
+    /**
+     * Get the active payment gateway (the one to use for this request)
+     */
+    protected function getActiveGateway(): string
+    {
+        $phonepe = $this->isPhonePeEnabled();
+        $ccavenue = $this->isCcavenueEnabled();
+        if ($phonepe && $ccavenue) {
+            $default = env('PAYMENT_GATEWAY', 'phonepe');
+            return in_array($default, ['phonepe', 'ccavenue'], true) ? $default : 'phonepe';
+        }
+        if ($phonepe) {
+            return 'phonepe';
+        }
+        return 'ccavenue';
     }
 
     /**
@@ -77,8 +115,8 @@ class CustomerPaymentController extends Controller
      */
     public function onlineBooking(Request $request, Project $project)
     {
-        // Check if CCAvenue is enabled
-        if (!$this->isCcavenueEnabled()) {
+        // Check if any online payment gateway is enabled
+        if (!$this->isOnlinePaymentEnabled()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Online payment is currently disabled. Please contact support.',
@@ -109,15 +147,39 @@ class CustomerPaymentController extends Controller
             ], 400);
         }
 
-        // Generate order ID for CCAvenue
-        $orderId = 'PAINTUP-' . $project->id . '-BOOKING-' . time();
+        $gateway = $this->getActiveGateway();
 
-        // Get customer info
+        if ($gateway === 'phonepe') {
+            $result = $this->paymentGateway->createPayment($project, 'booking', $bookingTotal);
+            if (empty($result['success']) || empty($result['payment_url'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $result['error'] ?? 'Failed to initiate payment.',
+                ], 400);
+            }
+            session([
+                'payment_gateway' => 'phonepe',
+                'payment_project_id' => $project->id,
+                'payment_milestone' => 'booking',
+                'payment_amount' => $bookingTotal,
+                'payment_base_amount' => $bookingBase,
+                'payment_gst_amount' => $bookingGst,
+                'payment_transaction_id' => $result['transaction_id'] ?? null,
+            ]);
+            return response()->json([
+                'success' => true,
+                'payment_url' => $result['payment_url'],
+                'order_id' => $result['transaction_id'] ?? null,
+                'message' => 'Redirecting to payment gateway...',
+            ]);
+        }
+
+        // CCAvenue flow
+        $orderId = 'PAINTUP-' . $project->id . '-BOOKING-' . time();
         $customerName = $project->client_name;
         $customerEmail = $project->customer->email ?? 'customer@example.com';
         $customerPhone = $project->phone;
 
-        // Generate CCAvenue payment URL
         $paymentUrl = $this->ccavenue->getPaymentUrl(
             $orderId,
             $bookingTotal,
@@ -127,7 +189,6 @@ class CustomerPaymentController extends Controller
             'booking'
         );
 
-        // Store payment info in session for callback
         session([
             'ccavenue_order_id' => $orderId,
             'ccavenue_project_id' => $project->id,
@@ -262,15 +323,13 @@ class CustomerPaymentController extends Controller
         $midTotal = $milestoneData['total_amount'];
 
         if ($request->payment_method === 'ONLINE') {
-            // Check if CCAvenue is enabled
-            if (!$this->isCcavenueEnabled()) {
+            if (!$this->isOnlinePaymentEnabled()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Online payment is currently disabled. Please contact support.',
                 ], 400);
             }
 
-            // Validate that amount is greater than zero
             if ($midTotal <= 0) {
                 return response()->json([
                     'success' => false,
@@ -278,15 +337,38 @@ class CustomerPaymentController extends Controller
                 ], 400);
             }
 
-            // Generate order ID for CCAvenue
-            $orderId = 'PAINTUP-' . $project->id . '-MID-' . time();
+            $gateway = $this->getActiveGateway();
 
-            // Get customer info
+            if ($gateway === 'phonepe') {
+                $result = $this->paymentGateway->createPayment($project, 'mid', $midTotal);
+                if (empty($result['success']) || empty($result['payment_url'])) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $result['error'] ?? 'Failed to initiate payment.',
+                    ], 400);
+                }
+                session([
+                    'payment_gateway' => 'phonepe',
+                    'payment_project_id' => $project->id,
+                    'payment_milestone' => 'mid',
+                    'payment_amount' => $midTotal,
+                    'payment_base_amount' => $midBase,
+                    'payment_gst_amount' => $midGst,
+                    'payment_transaction_id' => $result['transaction_id'] ?? null,
+                ]);
+                return response()->json([
+                    'success' => true,
+                    'payment_url' => $result['payment_url'],
+                    'order_id' => $result['transaction_id'] ?? null,
+                    'message' => 'Redirecting to payment gateway...',
+                ]);
+            }
+
+            $orderId = 'PAINTUP-' . $project->id . '-MID-' . time();
             $customerName = $project->client_name;
             $customerEmail = $project->customer->email ?? 'customer@example.com';
             $customerPhone = $project->phone;
 
-            // Generate CCAvenue payment URL
             $paymentUrl = $this->ccavenue->getPaymentUrl(
                 $orderId,
                 $midTotal,
@@ -296,7 +378,6 @@ class CustomerPaymentController extends Controller
                 'mid'
             );
 
-            // Store payment info in session for callback
             session([
                 'ccavenue_order_id' => $orderId,
                 'ccavenue_project_id' => $project->id,
@@ -398,15 +479,13 @@ class CustomerPaymentController extends Controller
         $finalTotal = $milestoneData['total_amount'];
 
         if ($request->payment_method === 'ONLINE') {
-            // Check if CCAvenue is enabled
-            if (!$this->isCcavenueEnabled()) {
+            if (!$this->isOnlinePaymentEnabled()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Online payment is currently disabled. Please contact support.',
                 ], 400);
             }
 
-            // Validate that amount is greater than zero
             if ($finalTotal <= 0) {
                 return response()->json([
                     'success' => false,
@@ -414,15 +493,38 @@ class CustomerPaymentController extends Controller
                 ], 400);
             }
 
-            // Generate order ID for CCAvenue
-            $orderId = 'PAINTUP-' . $project->id . '-FINAL-' . time();
+            $gateway = $this->getActiveGateway();
 
-            // Get customer info
+            if ($gateway === 'phonepe') {
+                $result = $this->paymentGateway->createPayment($project, 'final', $finalTotal);
+                if (empty($result['success']) || empty($result['payment_url'])) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $result['error'] ?? 'Failed to initiate payment.',
+                    ], 400);
+                }
+                session([
+                    'payment_gateway' => 'phonepe',
+                    'payment_project_id' => $project->id,
+                    'payment_milestone' => 'final',
+                    'payment_amount' => $finalTotal,
+                    'payment_base_amount' => $finalBase,
+                    'payment_gst_amount' => $finalGst,
+                    'payment_transaction_id' => $result['transaction_id'] ?? null,
+                ]);
+                return response()->json([
+                    'success' => true,
+                    'payment_url' => $result['payment_url'],
+                    'order_id' => $result['transaction_id'] ?? null,
+                    'message' => 'Redirecting to payment gateway...',
+                ]);
+            }
+
+            $orderId = 'PAINTUP-' . $project->id . '-FINAL-' . time();
             $customerName = $project->client_name;
             $customerEmail = $project->customer->email ?? 'customer@example.com';
             $customerPhone = $project->phone;
 
-            // Generate CCAvenue payment URL
             $paymentUrl = $this->ccavenue->getPaymentUrl(
                 $orderId,
                 $finalTotal,
@@ -432,7 +534,6 @@ class CustomerPaymentController extends Controller
                 'final'
             );
 
-            // Store payment info in session for callback
             session([
                 'ccavenue_order_id' => $orderId,
                 'ccavenue_project_id' => $project->id,
@@ -473,6 +574,112 @@ class CustomerPaymentController extends Controller
                 'message' => 'Final payment recorded. Supervisor will collect cash.',
             ]);
         }
+    }
+
+    /**
+     * Online payment callback - PhonePe (or other gateways) redirect user here after payment
+     * GET/POST /customer/payment/callback?gateway=phonepe
+     */
+    public function paymentCallback(Request $request)
+    {
+        $gateway = $request->query('gateway') ?? $request->input('gateway', '');
+
+        if ($gateway === 'phonepe') {
+            $projectId = session('payment_project_id');
+            $milestone = session('payment_milestone');
+            $merchantOrderId = session('payment_transaction_id');
+            $totalAmount = session('payment_amount');
+            $baseAmount = session('payment_base_amount');
+            $gstAmount = session('payment_gst_amount');
+
+            if (!$projectId || !$milestone) {
+                Log::error('PhonePe callback: Missing session data');
+                return redirect()->route('payment.failed')->with('error', 'Payment session expired');
+            }
+
+            // V2: verify via Order Status API (redirect does not send response body)
+            $status = $this->paymentGateway->getPhonePeOrderStatus($merchantOrderId);
+            $state = $status['state'] ?? null;
+            if ($state === 'FAILED') {
+                Log::warning('PhonePe callback: Payment failed', ['order' => $merchantOrderId]);
+                return redirect()->route('payment.failed')->with('error', 'Payment failed or was cancelled.');
+            }
+            if ($state !== 'COMPLETED') {
+                // PENDING or null – treat as not yet paid (user may have closed before paying)
+                $verified = $this->paymentGateway->verifyCallback('phonepe', $request->all());
+                if (!$verified) {
+                    Log::warning('PhonePe callback: Payment not completed', ['order' => $merchantOrderId, 'state' => $state]);
+                    return redirect()->route('payment.failed')->with('error', 'Payment was not completed. Please try again.');
+                }
+            }
+
+            $project = Project::find($projectId);
+            if (!$project) {
+                Log::error('PhonePe callback: Project not found', ['project_id' => $projectId]);
+                return redirect()->route('payment.failed')->with('error', 'Project not found');
+            }
+
+            session()->forget([
+                'payment_gateway',
+                'payment_project_id',
+                'payment_milestone',
+                'payment_amount',
+                'payment_base_amount',
+                'payment_gst_amount',
+                'payment_transaction_id',
+            ]);
+
+            $now = now();
+            DB::transaction(function () use ($project, $milestone, $merchantOrderId, $totalAmount, $baseAmount, $gstAmount, $now) {
+                $existing = MilestonePayment::where('project_id', $project->id)
+                    ->where('milestone_name', $milestone)
+                    ->where('payment_reference', $merchantOrderId)
+                    ->first();
+
+                if (!$existing) {
+                    MilestonePayment::create([
+                        'project_id' => $project->id,
+                        'milestone_name' => $milestone,
+                        'base_amount' => $baseAmount,
+                        'gst_amount' => $gstAmount,
+                        'total_amount' => $totalAmount,
+                        'payment_status' => MilestonePayment::STATUS_PAID,
+                        'payment_method' => MilestonePayment::METHOD_ONLINE,
+                        'payment_reference' => $merchantOrderId,
+                        'paid_at' => $now,
+                    ]);
+                }
+
+                switch ($milestone) {
+                    case 'booking':
+                        $project->booking_status = 'PAID';
+                        $project->booking_paid_at = $now;
+                        $project->booking_reference = $merchantOrderId;
+                        $project->mid_status = 'PENDING';
+                        $project->status = 'CONFIRMED';
+                        break;
+                    case 'mid':
+                        $project->mid_status = 'PAID';
+                        $project->mid_paid_at = $now;
+                        $project->mid_reference = $merchantOrderId;
+                        $project->final_status = 'PENDING';
+                        break;
+                    case 'final':
+                        $project->final_status = 'PAID';
+                        $project->final_paid_at = $now;
+                        $project->final_reference = $merchantOrderId;
+                        $project->status = 'COMPLETED';
+                        break;
+                }
+                $project->save();
+            });
+
+            Log::info('PhonePe payment successful', ['project_id' => $project->id, 'milestone' => $milestone]);
+            return redirect()->route('payment.success', $project->id)
+                ->with('success', ucfirst($milestone) . ' payment received successfully.');
+        }
+
+        return redirect()->route('payment.failed')->with('error', 'Unknown payment gateway');
     }
 
     /**

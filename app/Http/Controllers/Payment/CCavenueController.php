@@ -272,6 +272,35 @@ class CCavenueController extends Controller
     }
 
     /**
+     * Payment success page – used after CCAvenue or PhonePe payment.
+     * Redirects to customer dashboard with success message.
+     */
+    public function success(Project $project)
+    {
+        $message = session('success', 'Payment received successfully.');
+
+        if (auth()->guard('customer')->check()) {
+            return redirect()->route('customer.dashboard')->with('success', $message);
+        }
+
+        return redirect()->route('customer.login')->with('success', $message);
+    }
+
+    /**
+     * Payment failed page – used when payment fails or is cancelled.
+     */
+    public function failed()
+    {
+        $error = session('error', 'Payment could not be completed.');
+
+        if (auth()->guard('customer')->check()) {
+            return redirect()->route('customer.dashboard')->with('error', $error);
+        }
+
+        return redirect()->route('customer.login')->with('error', $error);
+    }
+
+    /**
      * Get payment configuration for frontend
      */
     public function getConfig()

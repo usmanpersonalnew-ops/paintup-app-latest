@@ -64,7 +64,7 @@ const logout = () => {
                             v-if="logoUrl"
                             :src="logoUrl"
                             :alt="companyName"
-                            class="h-8 w-auto"
+                            class="h-16 w-auto"
                         />
                         <span v-else class="text-xl font-bold text-white">{{ companyName }}</span>
                     </Link>
@@ -242,7 +242,7 @@ const logout = () => {
                                 v-if="logoUrl"
                                 :src="logoUrl"
                                 :alt="companyName"
-                                class="h-8 w-auto"
+                                class="h-16 w-auto"
                             />
                         </div>
                     </div>

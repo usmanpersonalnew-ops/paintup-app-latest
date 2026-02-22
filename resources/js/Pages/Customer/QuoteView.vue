@@ -326,7 +326,7 @@ const sendSMS = async () => {
                                 v-if="logoUrl"
                                 :src="logoUrl"
                                 :alt="companyName"
-                                class="h-10 w-10 object-contain"
+                                class="h-16 object-contain"
                             />
                             <ApplicationLogo v-else class="h-10 w-10 fill-current text-white" />
                         </div>

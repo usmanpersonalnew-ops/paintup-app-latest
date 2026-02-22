@@ -49,9 +49,9 @@ const currentYear = new Date().getFullYear();
                             v-if="logoUrl"
                             :src="logoUrl"
                             :alt="companyName"
-                            class="h-8 w-auto"
+                            class="h-16 w-auto"
                         />
-                        <ApplicationLogo v-else class="h-8 w-auto fill-current" />
+                        <ApplicationLogo v-else class="h-16 w-auto fill-current" />
 
                     </Link>
                 </div>

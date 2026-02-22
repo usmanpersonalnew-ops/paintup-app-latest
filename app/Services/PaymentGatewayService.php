@@ -3,13 +3,17 @@
 namespace App\Services;
 
 use App\Models\Project;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class PaymentGatewayService
 {
     protected $gateway;
+
     protected $config;
+
+    private const PHONEPE_TOKEN_CACHE_KEY = 'phonepe_access_token';
 
     public function __construct()
     {
@@ -65,7 +69,45 @@ class PaymentGatewayService
         return $this->config['enabled'] ?? false;
     }
 
-    // ==================== PHONEPE IMPLEMENTATION ====================
+    // ==================== PHONEPE V2 IMPLEMENTATION ====================
+
+    /**
+     * Get PhonePe OAuth access token (cached until expiry).
+     */
+    protected function getPhonePeAccessToken(): string
+    {
+        $config = config('paymentgateways.phonepe');
+        $cached = Cache::get(self::PHONEPE_TOKEN_CACHE_KEY);
+        if ($cached && isset($cached['token'], $cached['expires_at']) && $cached['expires_at'] > time() + 60) {
+            return $cached['token'];
+        }
+
+        $isSandbox = ($config['environment'] ?? 'sandbox') === 'sandbox';
+        $tokenUrl = $isSandbox
+            ? 'https://api-preprod.phonepe.com/apis/pg-sandbox/v1/oauth/token'
+            : 'https://api.phonepe.com/apis/identity-manager/v1/oauth/token';
+
+        $response = Http::asForm()->post($tokenUrl, [
+            'client_id' => $config['client_id'],
+            'client_version' => $config['client_version'] ?? 1,
+            'client_secret' => $config['client_secret'],
+            'grant_type' => 'client_credentials',
+        ]);
+
+        $result = $response->json();
+        if (!$response->successful() || empty($result['access_token'])) {
+            Log::error('PhonePe OAuth token failed', ['response' => $result]);
+            throw new \Exception('PhonePe authentication failed. Check PHONEPE_CLIENT_ID, PHONEPE_CLIENT_SECRET, PHONEPE_CLIENT_VERSION in .env');
+        }
+
+        $expiresAt = $result['expires_at'] ?? (time() + 3600);
+        Cache::put(self::PHONEPE_TOKEN_CACHE_KEY, [
+            'token' => $result['access_token'],
+            'expires_at' => $expiresAt,
+        ], now()->addSeconds($expiresAt - time() - 60));
+
+        return $result['access_token'];
+    }
 
     protected function createPhonePePayment(Project $project, string $paymentPurpose, float $amount): array
     {
@@ -75,46 +117,50 @@ class PaymentGatewayService
             throw new \Exception('PhonePe payment gateway is not enabled');
         }
 
-        $merchantTransactionId = 'PU-' . $project->id . '-' . strtoupper($paymentPurpose) . '-' . time();
-        $merchantUserId = 'CUST-' . $project->customer_id ?? 'GUEST';
+        if (empty($config['client_id']) || empty($config['client_secret'])) {
+            throw new \Exception('PhonePe V2 credentials missing. Set PHONEPE_CLIENT_ID and PHONEPE_CLIENT_SECRET in .env (from PhonePe Dashboard > Developer Settings).');
+        }
 
-        $payload = [
-            'merchantId' => $config['merchant_id'],
-            'merchantTransactionId' => $merchantTransactionId,
-            'merchantUserId' => $merchantUserId,
-            'amount' => (int) ($amount * 100),
-            'redirectUrl' => route('customer.payment.callback', ['gateway' => 'phonepe']),
-            'redirectMode' => 'POST',
-            'callbackUrl' => route('api.payment.phonepe.callback'),
-            'paymentInstrument' => [
-                'type' => 'PAY_PAGE',
+        // merchantOrderId: max 63 chars, only _ and - allowed
+        $merchantOrderId = 'PU-' . $project->id . '-' . strtoupper($paymentPurpose) . '-' . time();
+        $amountPaisa = (int) round($amount * 100);
+        if ($amountPaisa < 100) {
+            throw new \Exception('Amount must be at least ₹1 (100 paisa).');
+        }
+
+        $redirectUrl = route('customer.payment.callback', ['gateway' => 'phonepe']);
+
+        $body = [
+            'merchantOrderId' => $merchantOrderId,
+            'amount' => $amountPaisa,
+            'paymentFlow' => [
+                'type' => 'PG_CHECKOUT',
+                'merchantUrls' => [
+                    'redirectUrl' => $redirectUrl,
+                ],
             ],
         ];
 
-        $base64Payload = base64_encode(json_encode($payload));
-        $verifyString = $base64Payload . '/pg/v1/status/' . $config['merchant_id'] . '/' . $merchantTransactionId;
-        $hash = hash('sha256', $verifyString) . '###' . $config['salt_index'];
-
-        $isSandbox = $config['environment'] === 'sandbox';
-        $baseUrl = $isSandbox
-            ? 'https://api-preprod.phonepe.com/apis/pg/payment/v4/create'
-            : 'https://api.phonepe.com/apis/pg/payment/v4/create';
+        $isSandbox = ($config['environment'] ?? 'sandbox') === 'sandbox';
+        $payUrl = $isSandbox
+            ? 'https://api-preprod.phonepe.com/apis/pg-sandbox/checkout/v2/pay'
+            : 'https://api.phonepe.com/apis/pg/checkout/v2/pay';
 
         try {
+            $token = $this->getPhonePeAccessToken();
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
-                'X-VERIFY' => $hash,
-                'X-MERCHANT-ID' => $config['merchant_id'],
-            ])->post($baseUrl, $payload);
+                'Authorization' => 'O-Bearer ' . $token,
+            ])->post($payUrl, $body);
 
             $result = $response->json();
 
-            if ($response->successful() && isset($result['data']['instrumentResponse']['redirectInfo']['url'])) {
+            if ($response->successful() && !empty($result['redirectUrl'])) {
                 return [
                     'success' => true,
                     'gateway' => 'phonepe',
-                    'transaction_id' => $merchantTransactionId,
-                    'payment_url' => $result['data']['instrumentResponse']['redirectInfo']['url'],
+                    'transaction_id' => $merchantOrderId,
+                    'payment_url' => $result['redirectUrl'],
                     'amount' => $amount,
                     'purpose' => $paymentPurpose,
                 ];
@@ -123,7 +169,7 @@ class PaymentGatewayService
             Log::error('PhonePe payment creation failed', ['response' => $result]);
             return [
                 'success' => false,
-                'error' => $result['message'] ?? 'Payment creation failed',
+                'error' => $result['message'] ?? $result['code'] ?? 'Payment creation failed',
             ];
         } catch (\Exception $e) {
             Log::error('PhonePe payment error', ['exception' => $e->getMessage()]);
@@ -134,17 +180,48 @@ class PaymentGatewayService
         }
     }
 
-    protected function verifyPhonePeCallback(array $data): bool
+    /**
+     * Check PhonePe order status (V2 Order Status API).
+     * Returns state: PENDING | COMPLETED | FAILED, or null on error.
+     */
+    public function getPhonePeOrderStatus(string $merchantOrderId): ?array
     {
         $config = config('paymentgateways.phonepe');
-
-        if (!isset($data['response'])) {
-            return false;
+        if (empty($config['client_id']) || empty($config['client_secret'])) {
+            return null;
         }
 
-        $responseData = json_decode(base64_decode($data['response']), true);
+        $isSandbox = ($config['environment'] ?? 'sandbox') === 'sandbox';
+        $statusUrl = $isSandbox
+            ? 'https://api-preprod.phonepe.com/apis/pg-sandbox/checkout/v2/order/' . urlencode($merchantOrderId) . '/status'
+            : 'https://api.phonepe.com/apis/pg/checkout/v2/order/' . urlencode($merchantOrderId) . '/status';
 
-        return isset($responseData['success']) && $responseData['success'] === 'true';
+        try {
+            $token = $this->getPhonePeAccessToken();
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+                'Authorization' => 'O-Bearer ' . $token,
+            ])->get($statusUrl . '?details=false');
+
+            $result = $response->json();
+            if ($response->successful() && isset($result['state'])) {
+                return $result;
+            }
+            return null;
+        } catch (\Exception $e) {
+            Log::warning('PhonePe order status failed', ['order' => $merchantOrderId, 'error' => $e->getMessage()]);
+            return null;
+        }
+    }
+
+    protected function verifyPhonePeCallback(array $data): bool
+    {
+        // V2: redirect does not send 'response'; verification is done via Order Status API in controller using session merchantOrderId
+        if (isset($data['response'])) {
+            $decoded = json_decode(base64_decode($data['response']), true);
+            return isset($decoded['success']) && $decoded['success'] === 'true';
+        }
+        return false;
     }
 
     // ==================== CCAVENUE IMPLEMENTATION ====================

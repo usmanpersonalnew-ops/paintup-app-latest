@@ -27,7 +27,7 @@ const navItems = [
                     v-if="logoUrl"
                     :src="logoUrl"
                     :alt="companyName"
-                    class="h-8 w-auto"
+                    class="h-16 w-auto"
                 />
                 <h1 v-else class="text-lg font-semibold">{{ companyName }}</h1>
             </div>
