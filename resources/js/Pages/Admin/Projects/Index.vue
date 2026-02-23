@@ -18,22 +18,35 @@ defineProps({
 });
 
 const statusColors = {
+    'NEW': 'bg-gray-100 text-gray-800',
+    'LEAD': 'bg-amber-100 text-amber-800',
     'DRAFT': 'bg-gray-100 text-gray-800',
+    'PENDING': 'bg-yellow-100 text-yellow-800',
+    'ACCEPTED': 'bg-green-100 text-green-800',
     'AWAITING_CASH_CONFIRMATION': 'bg-orange-100 text-orange-800',
     'CONFIRMED': 'bg-green-100 text-green-800',
     'IN_PROGRESS': 'bg-blue-100 text-blue-800',
+    'REJECTED': 'bg-red-100 text-red-800',
     'COMPLETED': 'bg-purple-100 text-purple-800',
 };
 
+const statusOptions = [
+    { value: '', label: 'All Status' },
+    { value: 'NEW', label: 'New' },
+    { value: 'LEAD', label: 'Lead' },
+    { value: 'DRAFT', label: 'Draft' },
+    { value: 'PENDING', label: 'Pending' },
+    { value: 'ACCEPTED', label: 'Accepted' },
+    { value: 'AWAITING_CASH_CONFIRMATION', label: 'Awaiting Cash' },
+    { value: 'CONFIRMED', label: 'Confirmed' },
+    { value: 'IN_PROGRESS', label: 'In Progress' },
+    { value: 'REJECTED', label: 'Rejected' },
+    { value: 'COMPLETED', label: 'Completed' },
+];
+
 const getStatusLabel = (status) => {
-    const labels = {
-        'DRAFT': 'Draft',
-        'AWAITING_CASH_CONFIRMATION': 'Awaiting Cash',
-        'CONFIRMED': 'Confirmed',
-        'IN_PROGRESS': 'In Progress',
-        'COMPLETED': 'Completed',
-    };
-    return labels[status] || status;
+    const opt = statusOptions.find((o) => o.value === status);
+    return opt ? opt.label : status;
 };
 
 const formatCurrency = (value) => {
@@ -127,13 +140,8 @@ const handleDelete = (e) => {
                     placeholder="Search projects..."
                     class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                 />
-                <select class="px-4 py-2 border border-gray-300 rounded-lg">
-                    <option value="">All Status</option>
-                    <option value="DRAFT">Draft</option>
-                    <option value="AWAITING_CASH_CONFIRMATION">Awaiting Cash</option>
-                    <option value="CONFIRMED">Confirmed</option>
-                    <option value="IN_PROGRESS">In Progress</option>
-                    <option value="COMPLETED">Completed</option>
+                <select class="px-4 py-2 border border-gray-300 rounded-lg" name="status">
+                    <option v-for="opt in statusOptions" :key="opt.value || 'all'" :value="opt.value">{{ opt.label }}</option>
                 </select>
                 <button type="submit" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
                     Filter
@@ -163,7 +171,7 @@ const handleDelete = (e) => {
                             <div class="text-sm text-gray-900">{{ project.phone }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span :class="['px-2 py-1 text-xs font-medium rounded-full', statusColors[project.status]]">
+                            <span :class="['px-2 py-1 text-xs font-medium rounded-full', statusColors[project.status] || 'bg-gray-100 text-gray-800']">
                                 {{ getStatusLabel(project.status) }}
                             </span>
                         </td>

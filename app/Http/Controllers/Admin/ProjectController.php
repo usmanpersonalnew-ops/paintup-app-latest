@@ -170,7 +170,7 @@ class ProjectController extends Controller
             'phone' => 'required|string|max:20',
             'location' => 'required|string|max:500',
             'total_amount' => 'nullable|numeric',
-            'status' => 'required|string|in:NEW,PENDING,ACCEPTED,IN_PROGRESS,REJECTED,COMPLETED,DRAFT,AWAITING_CASH_CONFIRMATION,CONFIRMED',
+            'status' => 'required|string|in:NEW,LEAD,PENDING,ACCEPTED,IN_PROGRESS,REJECTED,COMPLETED,DRAFT,AWAITING_CASH_CONFIRMATION,CONFIRMED',
             'supervisor_id' => 'nullable|integer|exists:users,id',
             'home_visit_date' => 'nullable|date',
             'home_visit_time' => 'nullable|string',
