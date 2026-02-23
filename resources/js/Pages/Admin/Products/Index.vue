@@ -15,10 +15,10 @@ const tier = ref(props.filters.tier || '');
 
 // Auto-trigger filters
 watch([search, brand, tier], () => {
-    router.get(route('admin.products.index'), { 
-        search: search.value, 
-        brand: brand.value, 
-        tier: tier.value 
+    router.get(route('admin.products.index'), {
+        search: search.value,
+        brand: brand.value,
+        tier: tier.value
     }, { preserveState: true, replace: true });
 });
 
@@ -26,6 +26,11 @@ const reset = () => {
     search.value = '';
     brand.value = '';
     tier.value = '';
+};
+
+const deleteProduct = (product) => {
+    if (!confirm(`Delete "${product.name}"? This cannot be undone.`)) return;
+    router.delete(route('admin.products.destroy', product.id));
 };
 </script>
 
@@ -102,7 +107,7 @@ const reset = () => {
                         <td class="p-4 text-right space-x-2">
                             <a :href="route('admin.products.edit', product.id)" class="text-blue-600 hover:text-blue-900 font-medium text-sm">Edit</a>
                             <span class="text-gray-300">|</span>
-                            <button class="text-red-600 hover:text-red-900 font-medium text-sm">Delete</button>
+                            <button type="button" @click="deleteProduct(product)" class="text-red-600 hover:text-red-900 font-medium text-sm">Delete</button>
                         </td>
                     </tr>
                     <tr v-if="products.length === 0">

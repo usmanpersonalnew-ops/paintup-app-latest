@@ -99,4 +99,11 @@ class ProductController extends Controller
          
          return redirect()->route('admin.products.index');
      }
+
+    public function destroy($id)
+    {
+        $product = MasterProduct::findOrFail($id);
+        $product->delete();
+        return redirect()->route('admin.products.index');
+    }
 }
