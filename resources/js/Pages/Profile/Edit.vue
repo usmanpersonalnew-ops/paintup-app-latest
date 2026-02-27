@@ -3,6 +3,7 @@ import SupervisorLayout from '@/Layouts/SupervisorLayout.vue';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
 import { Head } from '@inertiajs/vue3';
+import AdminLayout from '@/Layouts/AdminLayout.vue';
 
 defineProps({
     mustVerifyEmail: {
@@ -17,7 +18,7 @@ defineProps({
 <template>
     <Head title="Profile" />
 
-    <SupervisorLayout>
+    <AdminLayout>
         <div class="py-6 px-4 sm:px-6">
             <h1 class="text-2xl font-bold text-gray-900 mb-6">Profile</h1>
             
@@ -56,5 +57,5 @@ defineProps({
                 </div>
             </div>
         </div>
-    </SupervisorLayout>
+    </AdminLayout>
 </template>

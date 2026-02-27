@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Scopes\ProjectVisibilityScope;
 
 class Project extends Model
 {
@@ -103,6 +104,11 @@ class Project extends Model
     public const WORK_STATUS_COMPLETED = 'COMPLETED';
     public const WORK_STATUS_CLOSED = 'CLOSED';
 
+    protected static function booted()
+    {
+        static::addGlobalScope(new ProjectVisibilityScope);
+    }
+
     public function rooms()
     {
         return $this->hasMany(ProjectRoom::class);
@@ -167,7 +173,7 @@ class Project extends Model
         $baseTotal = $this->base_total ?? $this->total_amount ?? 0;
         $gstRate = $this->getGstRate();
 
-        $percentage = match($milestoneType) {
+        $percentage = match ($milestoneType) {
             'booking' => 0.40,
             'mid' => 0.40,
             'final' => 0.20,
@@ -193,7 +199,7 @@ class Project extends Model
     {
         // First, try to sync milestone payments if they're missing or out of sync
         $this->syncMilestonePayments();
-        
+
         return $this->milestonePayments()
             ->where('payment_status', MilestonePayment::STATUS_PAID)
             ->count() === 3;
@@ -457,7 +463,7 @@ class Project extends Model
      */
     public function getWorkStatusLabelAttribute(): string
     {
-        return match($this->work_status) {
+        return match ($this->work_status) {
             self::WORK_STATUS_PENDING => 'Pending',
             self::WORK_STATUS_ASSIGNED => 'Assigned',
             self::WORK_STATUS_IN_PROGRESS => 'In Progress',
@@ -492,8 +498,8 @@ class Project extends Model
     public function hasPayment(): bool
     {
         return $this->booking_status === self::PAYMENT_PAID ||
-               $this->mid_status === self::PAYMENT_PAID ||
-               $this->final_status === self::PAYMENT_PAID;
+            $this->mid_status === self::PAYMENT_PAID ||
+            $this->final_status === self::PAYMENT_PAID;
     }
 
     /**

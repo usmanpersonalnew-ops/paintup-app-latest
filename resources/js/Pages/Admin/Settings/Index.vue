@@ -6,6 +6,7 @@ import TextInput from '@/Components/TextInput.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import { ref, watch } from 'vue';
+import AdminLayout from '@/Layouts/AdminLayout.vue';
 
 const props = defineProps({
     settings: {
@@ -127,7 +128,7 @@ const submit = () => {
 </script>
 
 <template>
-    <AuthenticatedLayout title="Branding Settings">
+    <AdminLayout title="Branding Settings">
         <div class="max-w-4xl mx-auto space-y-8">
             <!-- Page Header -->
             <div>
@@ -371,5 +372,5 @@ const submit = () => {
                 </div>
             </form>
         </div>
-    </AuthenticatedLayout>
+    </AdminLayout>
 </template>

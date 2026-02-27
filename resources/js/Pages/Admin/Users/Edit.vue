@@ -5,6 +5,7 @@ import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
+import { ref } from 'vue';
 
 const props = defineProps({
     user: {
@@ -22,23 +23,49 @@ const form = useForm({
     phone: props.user.phone,
     role: props.user.role,
     status: props.user.status,
+    password: '',
+    password_confirmation: '',
 });
 
+const showPassword = ref(false);
+const showConfirmPassword = ref(false);
+const changePassword = ref(false);
+
 const submit = () => {
+    // If not changing password, remove password fields from submission
+    if (!changePassword.value) {
+        delete form.password;
+        delete form.password_confirmation;
+    }
+    
     form.put(`/admin/users/${props.user.id}`, {
         onSuccess: () => {
             // Success message handled by flash
+            changePassword.value = false;
+            form.password = '';
+            form.password_confirmation = '';
         },
     });
+};
+
+const resetPassword = () => {
+    if (confirm('Send password reset link to user\'s email?')) {
+        form.post(`/admin/users/${props.user.id}/reset-password`, {
+            preserveScroll: true,
+        });
+    }
 };
 </script>
 
 <template>
     <AdminLayout>
-        <div class="mx-auto max-w-2xl">
+        <div class="mx-auto max-w-2xl px-4 py-6">
             <div class="mb-6">
-                <Link href="/admin/users" class="text-blue-600 hover:text-blue-900 text-sm font-medium">
-                    ← Back to Users
+                <Link href="/admin/users" class="text-blue-600 hover:text-blue-900 text-sm font-medium inline-flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Back to Users
                 </Link>
                 <h1 class="mt-2 text-2xl font-bold text-gray-900">Edit User</h1>
                 <p class="mt-1 text-sm text-gray-500">Update user information and permissions</p>
@@ -143,6 +170,96 @@ const submit = () => {
                             Inactive users cannot log in but their data is preserved.
                         </p>
                         <InputError :message="form.errors.status" class="mt-2" />
+                    </div>
+
+                    <!-- Change Password Section -->
+                    <div class="border-t border-gray-200 pt-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-medium text-gray-900">Change Password</h3>
+                            <button
+                                type="button"
+                                @click="changePassword = !changePassword"
+                                class="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                            >
+                                {{ changePassword ? 'Cancel' : 'Change Password' }}
+                            </button>
+                        </div>
+
+                        <!-- Password Reset Link Option -->
+                        <div v-if="!changePassword" class="mt-2">
+                            <button
+                                type="button"
+                                @click="resetPassword"
+                                class="text-sm text-blue-600 hover:text-blue-800"
+                            >
+                                Send password reset link to user's email
+                            </button>
+                        </div>
+
+                        <!-- Password Fields -->
+                        <div v-if="changePassword" class="mt-4 space-y-4">
+                            <!-- New Password -->
+                            <div>
+                                <InputLabel for="password" value="New Password" />
+                                <div class="relative">
+                                    <TextInput
+                                        id="password"
+                                        v-model="form.password"
+                                        :type="showPassword ? 'text' : 'password'"
+                                        class="mt-1 block w-full h-12 pr-10"
+                                        placeholder="Enter new password"
+                                    />
+                                    <button
+                                        type="button"
+                                        @click="showPassword = !showPassword"
+                                        class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                                    >
+                                        <svg v-if="!showPassword" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                        <svg v-else class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <InputError :message="form.errors.password" class="mt-2" />
+                            </div>
+
+                            <!-- Confirm New Password -->
+                            <div>
+                                <InputLabel for="password_confirmation" value="Confirm New Password" />
+                                <div class="relative">
+                                    <TextInput
+                                        id="password_confirmation"
+                                        v-model="form.password_confirmation"
+                                        :type="showConfirmPassword ? 'text' : 'password'"
+                                        class="mt-1 block w-full h-12 pr-10"
+                                        placeholder="Confirm new password"
+                                    />
+                                    <button
+                                        type="button"
+                                        @click="showConfirmPassword = !showConfirmPassword"
+                                        class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                                    >
+                                        <svg v-if="!showConfirmPassword" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                        <svg v-else class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <InputError :message="form.errors.password_confirmation" class="mt-2" />
+                            </div>
+
+                            <!-- Password Requirements -->
+                            <div class="text-xs text-gray-500">
+                                <p>• Password must be at least 8 characters</p>
+                                <p>• Leave blank to keep current password</p>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Submit Buttons -->

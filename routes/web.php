@@ -25,6 +25,7 @@ use App\Http\Controllers\Supervisor\QuoteItemController;
 use App\Http\Controllers\Supervisor\ServiceController;
 use App\Http\Controllers\Supervisor\SupervisorProjectWorkController;
 use App\Http\Controllers\Supervisor\ZoneDashboardController;
+use App\Http\Controllers\TierController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -51,7 +52,7 @@ Route::middleware('web')->group(function () {
 // ============================================
 // ADMIN ROUTES - Uses auth:admin guard
 // ============================================
-Route::prefix('admin')->middleware(['auth:web', 'verified'])->group(function () {
+Route::prefix('admin')->middleware(['auth:web', 'verified', 'checkRole:admin'])->group(function () {
     // Dashboard - Financial Dashboard
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
 
@@ -65,6 +66,7 @@ Route::prefix('admin')->middleware(['auth:web', 'verified'])->group(function () 
 
     // Product CRUD
     Route::resource('products', ProductController::class)->names('admin.products');
+    Route::resource('tier', TierController::class)->names('admin.tiers');
 
     // Service CRUD
     Route::resource('services', MasterServiceController::class)->names('admin.services');
@@ -143,7 +145,7 @@ Route::prefix('admin')->middleware(['auth:web', 'verified'])->group(function () 
 // ============================================
 // SUPERVISOR ROUTES - Uses auth:web with role-based access
 // ============================================
-Route::middleware(['auth:web', 'verified'])->prefix('supervisor')->name('supervisor.')->group(function () {
+Route::middleware(['auth:web', 'verified', 'checkRole:supervisor'])->prefix('supervisor')->name('supervisor.')->group(function () {
     // Dashboard
     Route::get('/dashboard', fn() => Inertia::render('Supervisor/Dashboard'))->name('dashboard');
 
