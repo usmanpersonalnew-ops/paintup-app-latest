@@ -35,4 +35,13 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 
+# Deployment artifacts / runtime-only files
+deployment.tar.gz
+/docker/nginx/ssl/*
+!/docker/nginx/ssl/.gitkeep
+
+# Database backups
+*.sql
+*.sql.gz
+
 
