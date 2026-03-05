@@ -119,14 +119,13 @@ COPY . .
 
 RUN composer dump-autoload --optimize --no-dev --no-scripts
 
-RUN chown -R www-data:www-data /app \
+RUN mkdir -p storage/framework/{sessions,views,cache} \
+    && mkdir -p storage/logs \
+    && mkdir -p bootstrap/cache \
+    && chown -R www-data:www-data /app \
     && chmod -R 755 /app \
     && chmod -R 775 /app/storage \
     && chmod -R 775 /app/bootstrap/cache
-
-RUN mkdir -p storage/framework/{sessions,views,cache} \
-    && mkdir -p storage/logs \
-    && chown -R www-data:www-data storage bootstrap/cache
 
 # ============================================================================
 # STAGE 4: Upload - Optimized Image for Registry
