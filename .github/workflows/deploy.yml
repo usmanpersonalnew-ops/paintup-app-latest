@@ -143,6 +143,8 @@ jobs:
           ls -lh deployment.tar.gz
 
           echo "Verifying critical files in deployment package..."
+          tar -tzf deployment.tar.gz > /tmp/pkg-filelist.txt
+
           CRITICAL_FILES=(
             "docker-compose.yml"
             "Dockerfile"
@@ -152,7 +154,7 @@ jobs:
           )
 
           for file in "${CRITICAL_FILES[@]}"; do
-            if tar -tzf deployment.tar.gz | grep -qE "(^|\\./)${file}$"; then
+            if grep -qE "(^|\\./)${file}$" /tmp/pkg-filelist.txt; then
               echo "$file found in package"
             else
               echo "$file missing from package"
