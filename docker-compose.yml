@@ -38,7 +38,7 @@ services:
       - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
       - ./docker/nginx/conf.d:/etc/nginx/conf.d
       - ./docker/nginx/ssl:/etc/nginx/ssl
-      - certbot-etc:/etc/letsencrypt
+      - /etc/letsencrypt:/etc/letsencrypt:ro
       - certbot-webroot:/var/www/certbot
     networks:
       - paintup_network
@@ -67,8 +67,6 @@ networks:
 
 volumes:
   db_data:
-    driver: local
-  certbot-etc:
     driver: local
   certbot-webroot:
     driver: local
