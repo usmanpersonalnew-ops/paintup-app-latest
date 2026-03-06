@@ -16,7 +16,7 @@ class ProjectController extends Controller
      */
     public function index(Request $request)
     {
-        $query = \App\Models\Project::query();
+        $query = Project::query();
 
         if ($request->search) {
             $query->where('client_name', 'like', '%'.$request->search.'%')
@@ -79,7 +79,7 @@ class ProjectController extends Controller
             'final_payment_amount' => $grandTotal > 0 ? round($grandTotal * 0.20, 2) : 0,
         ];
 
-        $project = Project::create([
+        Project::create([
             'client_name' => $validated['client_name'],
             'phone' => $validated['phone'],
             'location' => $validated['location'],
