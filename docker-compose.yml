@@ -39,7 +39,7 @@ services:
       - ./docker/nginx/conf.d:/etc/nginx/conf.d
       - ./docker/nginx/ssl:/etc/nginx/ssl
       - /etc/letsencrypt:/etc/letsencrypt:ro
-      - certbot-webroot:/var/www/certbot
+      - /home/ubuntu/certbot-webroot:/var/www/certbot
     networks:
       - paintup_network
     depends_on:
@@ -67,6 +67,4 @@ networks:
 
 volumes:
   db_data:
-    driver: local
-  certbot-webroot:
     driver: local
