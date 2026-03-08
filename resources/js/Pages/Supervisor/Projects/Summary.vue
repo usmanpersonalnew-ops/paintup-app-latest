@@ -25,7 +25,7 @@ const couponForm = useForm({
 
 const form = useForm({
     discount_amount: 0,
-    tax_percent: 18,
+    tax_percent: 0,
     notes: props.initialNotes || '',
 });
 

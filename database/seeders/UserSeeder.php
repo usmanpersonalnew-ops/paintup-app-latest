@@ -3,33 +3,51 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 
 class UserSeeder extends Seeder
 {
-    public function run(): void
+    public function run()
     {
-        // Admin user
-        User::updateOrCreate(
+        $adminRole      = Role::firstOrCreate(['name' => 'admin']);
+        $supervisorRole = Role::firstOrCreate(['name' => 'supervisor']);
+        $customerRole   = Role::firstOrCreate(['name' => 'customer']);
+
+        $admin = User::updateOrCreate(
             ['email' => 'admin@paintup.in'],
             [
                 'name' => 'Admin',
-                'email' => 'admin@paintup.in',
                 'password' => Hash::make('password123'),
-                'role' => 'ADMIN',
+                'phone' => '9000000001',
+                'status' => 'ACTIVE'
             ]
         );
+        $admin->syncRoles($adminRole);
 
-        // Supervisor user
-        User::updateOrCreate(
-            ['email' => 'usman@paintup.in'],
+        $supervisor = User::updateOrCreate(
+            ['email' => 'rahul@paintup.in'],
             [
-                'name' => 'Supervisor',
-                'email' => 'usman@paintup.in',
+                'name' => 'Rahul Supervisor',
                 'password' => Hash::make('password123'),
-                'role' => 'SUPERVISOR',
+                'phone' => '9000000002',
+                'status' => 'ACTIVE'
             ]
         );
+        $supervisor->syncRoles($supervisorRole);
+
+        for ($i = 1; $i <= 5; $i++) {
+
+            $customer = User::create([
+                'name' => "Customer {$i}",
+                'email' => null,
+                'phone' => '800000000' . $i,
+                'password' => Hash::make('password123'),
+                'status' => 'ACTIVE'
+            ]);
+
+            $customer->assignRole($customerRole);
+        }
     }
 }

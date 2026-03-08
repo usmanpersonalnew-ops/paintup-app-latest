@@ -18,13 +18,11 @@ class ProjectVisibilityScope implements Scope
         }
 
         $user = Auth::user();
-
-        // Admin can see all projects
+      
         if ($user->hasRole('admin')) {
             return;
         }
 
-        // Supervisor can see only assigned projects
         if ($user->hasRole('supervisor')) {
             $builder->where('supervisor_id', $user->id);
             return;

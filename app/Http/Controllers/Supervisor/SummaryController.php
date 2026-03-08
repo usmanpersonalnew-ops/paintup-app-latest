@@ -158,12 +158,8 @@ class SummaryController extends Controller
      */
     public function sendWhatsAppMessage(Project $project)
     {
-        \Log::info('sendWhatsAppMessage called for project', ['project_id' => $project->id]);
-
         $customerName = $project->client_name;
         $customerPhone = $project->phone;
-
-        // Use customer name from customer table, or project client_name, or fallback
 
         if (!$customerPhone) {
             return response()->json([
@@ -180,6 +176,10 @@ class SummaryController extends Controller
         );
 
         if ($sent) {
+
+        $project->update([
+            'status' => 'QUOTE_SHARED',
+        ]);
             return response()->json([
                 'success' => true,
                 'message' => 'WhatsApp message sent to customer.'
