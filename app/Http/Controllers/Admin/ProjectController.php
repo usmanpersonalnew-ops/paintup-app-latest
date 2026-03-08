@@ -80,11 +80,13 @@ class ProjectController extends Controller
             'final_payment_amount' => $grandTotal > 0 ? round($grandTotal * 0.20, 2) : 0,
         ];
 
-        $user = User::findOrCreate([
-            'name' => $validated['client_name'],
+        $user = User::firstOrCreate([
             'phone' => $validated['phone'],
+        ], [
+            'name' => $validated['client_name'],
             'email' => $validated['email'] ?? null,
             'status' => 'ACTIVE',
+            'password' => bcrypt('123456'), // Set a default password or generate one
         ]);
 
         Project::create([
