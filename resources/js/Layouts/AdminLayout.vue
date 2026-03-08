@@ -43,12 +43,12 @@ const logout = () => {
                 sidebarOpen ? 'w-64' : 'w-20'
             ]" :style="{ backgroundColor: secondaryColor }">
                 <!-- Logo -->
-                <div class="flex h-16 items-center justify-center border-b border-white/10">
+                <!-- <div class="flex h-16 items-center justify-center border-b border-white/10">
                     <Link href="/admin/dashboard" class="flex items-center gap-2">
                         <img v-if="logoUrl" :src="logoUrl" :alt="companyName" class="h-16 w-auto" />
                         <ApplicationLogo v-else class="h-16 w-auto fill-current" />
                     </Link>
-                </div>
+                </div> -->
 
                 <!-- Navigation -->
                 <nav class="mt-6 px-4">

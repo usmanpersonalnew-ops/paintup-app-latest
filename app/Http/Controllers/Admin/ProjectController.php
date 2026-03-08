@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Project;
+use App\Models\User;
 use App\Services\Msg91WhatsappService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -19,9 +20,9 @@ class ProjectController extends Controller
         $query = Project::query();
 
         if ($request->search) {
-            $query->where('client_name', 'like', '%'.$request->search.'%')
-                  ->orWhere('phone', 'like', '%'.$request->search.'%')
-                  ->orWhere('location', 'like', '%'.$request->search.'%');
+            $query->where('client_name', 'like', '%' . $request->search . '%')
+                ->orWhere('phone', 'like', '%' . $request->search . '%')
+                ->orWhere('location', 'like', '%' . $request->search . '%');
         }
 
         if ($request->status) {
@@ -39,7 +40,7 @@ class ProjectController extends Controller
      */
     public function create()
     {
-        $supervisors = \App\Models\User::where('role', 'SUPERVISOR')
+        $supervisors = User::role('supervisor')
             ->where('status', 'ACTIVE')
             ->select('id', 'name', 'email')
             ->get();
@@ -56,7 +57,7 @@ class ProjectController extends Controller
     {
         $validated = $request->validate([
             'client_name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
+            'phone' => 'required|numeric|min:1000000000|max:9999999999',
             'location' => 'required|string|max:500',
             'total_amount' => 'nullable|numeric',
             'supervisor_id' => 'nullable|integer|exists:users,id',
@@ -78,6 +79,13 @@ class ProjectController extends Controller
             'mid_payment_amount' => $grandTotal > 0 ? round($grandTotal * 0.40, 2) : 0,
             'final_payment_amount' => $grandTotal > 0 ? round($grandTotal * 0.20, 2) : 0,
         ];
+
+        User::create([
+            'name' => $validated['client_name'],
+            'phone' => $validated['phone'],
+            'email' => $validated['email'],
+            'status' => 'ACTIVE',
+        ]);
 
         Project::create([
             'client_name' => $validated['client_name'],
@@ -254,8 +262,7 @@ class ProjectController extends Controller
                         } else {
                             $service->custom_name = 'Additional Service';
                         }
-                    }
-                    else {
+                    } else {
                         $service->custom_name = 'Additional Service';
                     }
                 }

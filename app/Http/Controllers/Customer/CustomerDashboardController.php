@@ -24,6 +24,7 @@ class CustomerDashboardController extends Controller
 
         // Get all projects for this customer (by phone number)
         $projects = Project::where('phone', $customer->phone)
+            ->where('status', '!=', 'DRAFT')
             ->with(['rooms.items.surface', 'rooms.items.product', 'rooms.services.masterService'])
             ->orderBy('created_at', 'desc')
             ->get();
