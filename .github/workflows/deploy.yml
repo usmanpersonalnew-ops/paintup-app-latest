@@ -397,6 +397,19 @@ jobs:
             FILESYSTEM_DISK=local
             BROADCAST_CONNECTION=log
 
+
+            # ==========================================
+            # PhonePe Payment Configuration
+            # ==========================================
+            PHONEPE_CLIENT_ID=${{ secrets.PHONEPE_CLIENT_ID }}
+            PHONEPE_CLIENT_SECRET=${{ secrets.PHONEPE_CLIENT_SECRET }}
+
+            # ==========================================
+            # MSG91 WhatsApp / OTP
+            # ==========================================
+            MSG91_AUTH_KEY=${{ secrets.MSG91_AUTH_KEY }}
+
+
             DOCKER_HUB_USERNAME=${{ secrets.DOCKER_HUB_USERNAME }}
             EOF
 
