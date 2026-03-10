@@ -43,12 +43,12 @@ const logout = () => {
                 sidebarOpen ? 'w-64' : 'w-20'
             ]" :style="{ backgroundColor: secondaryColor }">
                 <!-- Logo -->
-                <div class="flex h-16 items-center justify-center border-b border-white/10">
+                <!-- <div class="flex h-16 items-center justify-center border-b border-white/10">
                     <Link href="/admin/dashboard" class="flex items-center gap-2">
                         <img v-if="logoUrl" :src="logoUrl" :alt="companyName" class="h-16 w-auto" />
                         <ApplicationLogo v-else class="h-16 w-auto fill-current" />
                     </Link>
-                </div>
+                </div> -->
 
                 <!-- Navigation -->
                 <nav class="mt-6 px-4">
@@ -163,6 +163,17 @@ const logout = () => {
                                         d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                                 </svg>
                                 <span v-if="sidebarOpen">Inquiries</span>
+                            </Link>
+                        </li>
+                            <li>
+                            <Link href="/admin/customers"
+                                class="flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-white/10 transition-colors"
+                                :class="{ 'justify-center': !sidebarOpen }">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                                </svg>
+                                <span v-if="sidebarOpen">Customers</span>
                             </Link>
                         </li>
                     </ul>

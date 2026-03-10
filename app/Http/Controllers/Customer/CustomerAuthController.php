@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Customer;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\CustomerOtp;
+use App\Models\User;
 use App\Services\Msg91WhatsappService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -47,7 +48,17 @@ class CustomerAuthController extends Controller
         ]);
 
         $phone = $this->formatPhoneNumber($request->phone);
+        $user = User::where('phone', $phone)->first();
+
         
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Phone number not registered. Please contact support.',
+            ], 422);
+        }
+
+
         // Validate phone format (10 digit Indian number)
         if (!preg_match('/^[6-9]\d{9}$/', $phone)) {
             return response()->json([
@@ -113,7 +124,6 @@ class CustomerAuthController extends Controller
         $phone = $this->formatPhoneNumber($request->phone);
         $otp = $request->otp;
 
-        // Find valid OTP record
         $otpRecord = CustomerOtp::findValidOtp($phone);
 
         if (!$otpRecord) {
@@ -123,7 +133,6 @@ class CustomerAuthController extends Controller
             ], 422);
         }
 
-        // Verify OTP using hash comparison
         if (!$otpRecord->matches($otp)) {
             return response()->json([
                 'success' => false,
@@ -131,7 +140,6 @@ class CustomerAuthController extends Controller
             ], 422);
         }
 
-        // Find or create customer (no quote check required - any phone can login)
         $customer = Customer::where('phone', $phone)->first();
 
         if (!$customer) {

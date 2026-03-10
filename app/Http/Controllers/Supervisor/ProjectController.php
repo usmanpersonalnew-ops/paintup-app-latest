@@ -31,11 +31,14 @@ class ProjectController extends Controller
             'phone' => 'required|string|max:15',
         ]);
 
-        \App\Models\Project::create([
+        $userId = auth()->id();
+
+        Project::create([
             'client_name' => $request->client_name,
             'location' => $request->location,
             'phone' => $request->phone,
-            'status' => 'NEW' // <--- FORCE 'NEW' (Fixes the crash)
+            'status' => 'NEW',
+            'supervisor_id' => $userId,
         ]);
 
         return redirect()->route('supervisor.projects.index');

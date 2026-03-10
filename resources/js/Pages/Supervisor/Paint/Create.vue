@@ -6,6 +6,7 @@ import { useForm, Link } from '@inertiajs/vue3';
 const props = defineProps({
     zone: Object,
     surfaces: Array,
+    tiers: Array, // Add tiers prop
     editItem: Object, // Optional - present when editing
 });
 
@@ -35,7 +36,7 @@ const form = useForm({
     manual_area_mode: 'DIMENSIONS', // 'DIMENSIONS' or 'DIRECT'
     // Lumpsum
     lumpsum_amount: 0,
-    // Tier filter
+    // Tier filter (using tier_id)
     selected_tier: '',
     // Deductions
     deductions: [],
@@ -76,9 +77,9 @@ onMounted(() => {
             }
         }
 
-        // Set tier based on product
+        // Set tier based on product (using tier_id)
         if (item.product) {
-            form.selected_tier = item.product.tier || '';
+            form.selected_tier = item.product.tier_id || '';
         }
     }
 });
@@ -94,14 +95,6 @@ watch(selectedSurfaceId, (newVal, oldVal) => {
         form.manual_deduction_sqft = 0;
     }
 });
-
-// Tier options
-const tierOptions = [
-    { value: '', label: 'ALL' },
-    { value: 'ECONOMY', label: 'Economy' },
-    { value: 'PREMIUM', label: 'Premium' },
-    { value: 'LUXURY', label: 'Luxury' },
-];
 
 // Computed: Filtered Surfaces (by zone type)
 const filteredSurfaces = computed(() => {
@@ -132,9 +125,14 @@ const selectedSurface = computed(() => {
 // Computed: Filtered Products (by tier)
 const filteredProducts = computed(() => {
     let products = selectedSurface.value?.products || [];
+    
+    // Filter by tier if selected (not empty)
     if (form.selected_tier) {
-        products = products.filter(p => p.tier?.toUpperCase() === form.selected_tier.toUpperCase());
+        products = products.filter(p => {
+            return p.tier_id === parseInt(form.selected_tier);
+        });
     }
+    
     return products;
 });
 
@@ -342,7 +340,7 @@ const submit = () => {
             <Link :href="route('supervisor.zones.show', zone.id)" class="font-bold text-xl text-gray-600">
                 ←
             </Link>
-            <h1 class="font-bold text-xl">ADD PAINT ITEM</h1>
+            <h1 class="font-bold text-xl">{{ isEditMode ? 'EDIT' : 'ADD' }} PAINT ITEM</h1>
         </div>
 
         <!-- Zone info -->
@@ -380,25 +378,21 @@ const submit = () => {
                 </select>
             </div>
 
-            <!-- 2) PRODUCT FILTER (shown after surface selected) -->
+            <!-- 2) TIER FILTER (DYNAMIC FROM DATABASE - DROPDOWN) -->
             <div v-if="selectedSurfaceId" class="bg-white p-4 rounded shadow">
-                <label class="text-xs font-bold text-gray-500 uppercase">2. PRODUCT FILTER</label>
-                <div class="flex gap-2 mt-2">
-                    <button
-                        type="button"
-                        v-for="tier in tierOptions"
-                        :key="tier.value"
-                        @click="form.selected_tier = tier.value"
-                        :class="[
-                            'px-3 py-2 rounded text-sm font-medium h-10 flex-1',
-                            form.selected_tier === tier.value
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-100 text-gray-600'
-                        ]"
-                    >
-                        {{ tier.label }}
-                    </button>
-                </div>
+                <label class="text-xs font-bold text-gray-500 uppercase">2. TIER FILTER</label>
+                <select
+                    v-model="form.selected_tier"
+                    class="w-full border border-gray-300 rounded p-3 h-12 mt-1 bg-white"
+                >
+                    <option value="">ALL</option>
+                    <option v-for="tier in props.tiers" :key="tier.id" :value="tier.id">
+                        {{ tier.name }}
+                    </option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">
+                    Select a tier to filter products
+                </p>
             </div>
 
             <!-- 3) PRODUCT SELECTION -->
@@ -411,7 +405,7 @@ const submit = () => {
                 >
                     <option value="">Select Product...</option>
                     <option v-for="p in filteredProducts" :key="p.id" :value="p.id">
-                        {{ p.name }} ({{ p.brand }}) - {{ p.tier }}
+                        {{ p.name }} ({{ p.brand }}) - {{ p.tier?.name || 'No Tier' }}
                     </option>
                 </select>
                 <p v-if="!selectedSurface" class="text-sm text-gray-500 mt-1">
@@ -774,7 +768,7 @@ const submit = () => {
                 class="w-full bg-blue-600 text-white py-4 rounded font-bold shadow text-lg h-14"
                 :class="!form.system_id ? 'bg-gray-400' : 'bg-blue-600'"
             >
-                SAVE ITEM - ₹{{ (isNaN(calculatedAmount) ? 0 : calculatedAmount).toFixed(2) }}
+                {{ isEditMode ? 'UPDATE' : 'SAVE' }} ITEM - ₹{{ (isNaN(calculatedAmount) ? 0 : calculatedAmount).toFixed(2) }}
             </button>
         </form>
 

@@ -20,6 +20,7 @@ class BillingDetail extends Model
         'business_address',
         'state',
         'pincode',
+        'order_id',
     ];
 
     protected $casts = [
