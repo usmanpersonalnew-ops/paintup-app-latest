@@ -272,6 +272,7 @@ Route::middleware(['auth:customer'])->prefix('customer')->name('customer.')->gro
     Route::post('/project/{project}/booking/online', [CustomerPaymentController::class, 'onlineBooking'])->name('project.booking.online');
     Route::post('/project/{project}/booking/cash', [CustomerPaymentController::class, 'cashBooking'])->name('project.booking.cash');
     Route::post('/project/{project}/mid-payment', [CustomerPaymentController::class, 'payMidPayment'])->name('project.pay-mid');
+        Route::post('/project/{orderId}/mid-payment', [CustomerPaymentController::class, 'checkAndUpdateStatus'])->name('project.pay-update');
     Route::post('/project/{project}/final-payment', [CustomerPaymentController::class, 'payFinalPayment'])->name('project.pay-final');
 
     // Dedicated Payment Page (Checkout Style)

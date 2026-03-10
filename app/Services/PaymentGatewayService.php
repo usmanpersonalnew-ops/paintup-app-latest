@@ -109,6 +109,37 @@ class PaymentGatewayService
         return $result['access_token'];
     }
 
+
+    public function getOrderStatus(string $orderId)
+    {
+
+        $token = $this->getPhonePeAccessToken();
+
+        $url = "https://api-preprod.phonepe.com/apis/pg-sandbox/checkout/v2/order/{$orderId}/status";
+
+        $response = Http::withHeaders([
+            'Content-Type' => 'application/json',
+            'Authorization' => 'O-Bearer ' . $token,
+        ])->get($url, [
+                    'details' => 'false'
+                ]);
+
+        $result = $response->json();
+
+        dd($result);
+
+        if (!$response->successful()) {
+            Log::error('PhonePe Status API Failed', [
+                'orderId' => $orderId,
+                'response' => $result
+            ]);
+
+            throw new \Exception('PhonePe status API failed');
+        }
+
+        return $result;
+    }
+
     protected function createPhonePePayment(Project $project, string $paymentPurpose, float $amount): array
     {
         $config = config('paymentgateways.phonepe');
