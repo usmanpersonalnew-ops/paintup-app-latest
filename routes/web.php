@@ -193,7 +193,7 @@ Route::middleware(['auth:web', 'verified', 'checkRole:supervisor'])->prefix('sup
 
     // Service store with FormData (for Zones/Show.vue modal)
     Route::post('/zones/{projectRoom}/services', [ServiceController::class, 'storeFormData'])->name('zones.services.store');
-
+    
     // Duplicate Zone
     Route::post('/zones/{projectRoom}/duplicate', [ProjectRoomController::class, 'duplicate'])->name('zones.duplicate');
 
