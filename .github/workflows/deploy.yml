@@ -397,6 +397,10 @@ jobs:
             FILESYSTEM_DISK=local
             BROADCAST_CONNECTION=log
 
+            MSG91_AUTH_KEY=${{ secrets.MSG91_AUTH_KEY }}
+            PHONEPE_CLIENT_ID=${{ secrets.PHONEPE_CLIENT_ID }}
+            PHONEPE_CLIENT_SECRET=${{ secrets.PHONEPE_CLIENT_SECRET }}
+
             DOCKER_HUB_USERNAME=${{ secrets.DOCKER_HUB_USERNAME }}
             EOF
 
