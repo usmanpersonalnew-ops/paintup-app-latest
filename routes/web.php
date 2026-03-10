@@ -190,6 +190,7 @@ Route::middleware(['auth:web', 'verified', 'checkRole:supervisor'])->prefix('sup
     Route::post('/projects/{project}/apply-coupon', [\App\Http\Controllers\Supervisor\CouponApplyController::class, 'apply'])->name('projects.apply-coupon');
     Route::post('/projects/{project}/remove-coupon', [\App\Http\Controllers\Supervisor\CouponApplyController::class, 'remove'])->name('projects.remove-coupon');
 
+    
     // Payment Routes - Supervisor can confirm cash payments
     Route::post('/projects/{project}/confirm-cash-booking', [SupervisorPaymentController::class, 'confirmCashBooking'])->name('projects.confirm-cash-booking');
     Route::post('/projects/{project}/confirm-cash', [SupervisorPaymentController::class, 'confirmCashPayment'])->name('projects.confirm-cash');
