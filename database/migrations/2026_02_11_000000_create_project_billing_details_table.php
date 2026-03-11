@@ -21,6 +21,7 @@ return new class extends Migration
             $table->text('business_address')->nullable();
             $table->string('state')->nullable();
             $table->string('pincode')->nullable();
+            $table->string('order_id')->nullable();
             $table->timestamps();
             
             // Unique constraint per project + milestone

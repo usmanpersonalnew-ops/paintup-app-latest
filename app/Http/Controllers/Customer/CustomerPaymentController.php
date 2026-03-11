@@ -122,6 +122,7 @@ class CustomerPaymentController extends Controller
                 'message' => 'Online payment is currently disabled. Please contact support.',
             ], 400);
         }
+        
 
         // Recalculate totals if base_total is missing or zero
         if (empty($project->base_total) || $project->base_total == 0) {
@@ -358,8 +359,9 @@ class CustomerPaymentController extends Controller
                 }
 
                 $orderId = 'PAINTUP-' . $project->id . '-MID-' . time();
+                // dd($orderId);
 
-                BillingDetail::updateOrCreate(
+                $billing = BillingDetail::updateOrCreate(
                     ['project_id' => $project->id, 'milestone_type' => 'mid'],
                     [
                         'buying_type' => $billingData['buying_type'],
@@ -371,6 +373,7 @@ class CustomerPaymentController extends Controller
                         'order_id' => $orderId,
                     ]
                 );
+
             }
         }
 
@@ -405,6 +408,7 @@ class CustomerPaymentController extends Controller
             $gateway = $this->getActiveGateway();
 
             if ($gateway === 'phonepe') {
+                // dd('here');
                 $result = $this->paymentGateway->createPayment($project, 'mid', $midTotal);
                 if (empty($result['success']) || empty($result['payment_url'])) {
                     return response()->json([
