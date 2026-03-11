@@ -25,7 +25,6 @@ const couponForm = useForm({
 
 const form = useForm({
     discount_amount: 0,
-    tax_percent: 18,
     notes: props.initialNotes || '',
 });
 
@@ -42,24 +41,13 @@ const effectiveDiscount = computed(() => {
 // Calculate subtotal (before discount)
 const subtotalBeforeDiscount = computed(() => props.subtotal);
 
-// Calculate GST on subtotal (before discount)
-const taxAmount = computed(() => {
-    return subtotalBeforeDiscount.value * ((form.tax_percent || 0) / 100);
-});
-
-// Calculate Total After Discount (Excl GST) - Single Source of Truth
+// Calculate Total After Discount - Single Source of Truth
 const totalAfterDiscount = computed(() => {
     return Math.max(0, subtotalBeforeDiscount.value - effectiveDiscount.value);
 });
 
-// Calculate Grand Total (Total After Discount + GST)
-const grandTotal = computed(() => {
-    return totalAfterDiscount.value + taxAmount.value;
-});
-
-// For backward compatibility
-const finalTotal = computed(() => grandTotal.value);
-const discountedSubtotal = computed(() => totalAfterDiscount.value);
+// Final amount customer pays (no GST)
+const finalTotal = computed(() => totalAfterDiscount.value);
 
 const formatCurrency = (value) => {
     const safeValue = value || 0;
@@ -257,19 +245,19 @@ const hasPayment = computed(() => {
                 </div>
             </div>
 
-            <!-- Total After Discount (Excl GST) - Single Source of Truth -->
+            <!-- Total After Discount -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                 <div class="flex justify-between text-lg font-medium">
-                    <span>SUBTOTAL (Excl. GST):</span>
+                    <span>SUBTOTAL:</span>
                     <span>{{ formatCurrency(subtotal) }}</span>
                 </div>
                 <div v-if="effectiveDiscount > 0" class="flex justify-between text-sm mt-2">
                     <span class="text-green-600">Discount:</span>
                     <span class="text-green-600">-{{ formatCurrency(effectiveDiscount) }}</span>
                 </div>
-                <div class="flex justify-between text-lg font-bold mt-2 pt-2 border-t">
-                    <span>TOTAL (Excl. GST):</span>
-                    <span class="text-green-600">{{ formatCurrency(totalAfterDiscount) }}</span>
+                <div class="flex justify-between text-xl font-bold mt-2 pt-2 border-t">
+                    <span>TOTAL AMOUNT:</span>
+                    <span class="text-blue-600">{{ formatCurrency(finalTotal) }}</span>
                 </div>
             </div>
 
@@ -283,25 +271,6 @@ const hasPayment = computed(() => {
                     placeholder="0"
                     :disabled="hasPayment"
                 />
-            </div>
-
-            <!-- GST Section -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <h2 class="text-base font-bold text-gray-800 mb-3">GST ({{ form.tax_percent }}%)</h2>
-                <div class="flex justify-between text-lg font-medium">
-                    <span>GST Amount:</span>
-                    <span class="text-orange-600">{{ formatCurrency(taxAmount) }}</span>
-                </div>
-                <p class="text-xs text-gray-500 mt-2">GST will be added at payment time</p>
-            </div>
-
-            <!-- Grand Total (For Reference Only) -->
-            <div class="bg-blue-50 rounded-lg shadow-sm border border-blue-200 p-4">
-                <div class="flex justify-between text-xl font-bold">
-                    <span>GRAND TOTAL (Incl. GST):</span>
-                    <span class="text-blue-600">{{ formatCurrency(grandTotal) }}</span>
-                </div>
-                <p class="text-xs text-gray-500 mt-2">*This is the total amount customer will pay including GST</p>
             </div>
 
             <!-- Notes / Exclusions - Screen E Wireframe -->

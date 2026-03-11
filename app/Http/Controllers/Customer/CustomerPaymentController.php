@@ -12,6 +12,7 @@ use App\Services\PaymentGatewayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
@@ -212,57 +213,62 @@ class CustomerPaymentController extends Controller
      * Customer marks intent to pay cash - requires supervisor confirmation
      */
     public function cashBooking(Request $request, Project $project)
-    {
-        $request->validate([]);
+{
+    // Get base total
+    $baseTotal = $project->base_total ?? $project->total_amount ?? 0;
 
-        // Calculate pricing from BASE TOTAL only
-        $baseTotal = $project->base_total ?? $project->total_amount ?? 0;
-        $gstRate = $project->getGstRate();
+    // GST rate
+    $gstRate = $project->getGstRate();
 
-        // Calculate milestone amounts from base total
-        $bookingBase = round($baseTotal * 0.40, 2);
-        $bookingGst = round($bookingBase * ($gstRate / 100), 2);
-        $bookingTotal = $bookingBase + $bookingGst;
+    // Booking calculation (40%)
+    $bookingBase  = round($baseTotal * 0.40, 2);
+    $bookingGst   = round($bookingBase * ($gstRate / 100), 2);
+    $bookingTotal = $bookingBase + $bookingGst;
 
-        DB::transaction(function () use ($project, $baseTotal, $bookingBase, $bookingGst, $bookingTotal, $gstRate) {
-            // Create milestone payment record with AWAITING_CONFIRMATION status
-            MilestonePayment::create([
-                'project_id' => $project->id,
-                'milestone_name' => 'booking',
-                'base_amount' => $bookingBase,
-                'gst_amount' => $bookingGst,
-                'total_amount' => $bookingTotal,
-                'payment_status' => MilestonePayment::STATUS_AWAITING_CONFIRMATION,
-                'payment_method' => MilestonePayment::METHOD_CASH,
-                'payment_reference' => 'CASH-' . strtoupper(uniqid()),
-            ]);
+    DB::transaction(function () use ($project, $baseTotal, $gstRate, $bookingBase, $bookingGst, $bookingTotal) {
 
-            // Update project
-            $project->base_total = $baseTotal;
-            $project->gst_rate = $gstRate;
-            $project->booking_amount = $bookingBase;
-            $project->booking_gst = $bookingGst;
-            $project->booking_total = $bookingTotal;
-            $project->booking_status = 'AWAITING_CONFIRMATION';
-            $project->mid_status = 'PENDING';
-            $project->final_status = 'PENDING';
-            $project->payment_method = 'CASH';
-            $project->status = 'AWAITING_CASH_CONFIRMATION';
-            $project->save();
-        });
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Cash booking marked. Awaiting supervisor confirmation.',
-            'project' => [
-                'booking_status' => 'AWAITING_CONFIRMATION',
-                'status' => 'AWAITING_CASH_CONFIRMATION',
-                'booking_amount' => $bookingBase,
-                'booking_gst' => $bookingGst,
-                'booking_total' => $bookingTotal,
-            ],
+        // Create milestone payment
+        MilestonePayment::create([
+            'project_id'        => $project->id,
+            'milestone_name'    => 'booking',
+            'base_amount'       => $bookingBase,
+            'gst_amount'        => $bookingGst,
+            'total_amount'      => $bookingTotal,
+            'payment_status'    => MilestonePayment::STATUS_AWAITING_CONFIRMATION,
+            'payment_method'    => MilestonePayment::METHOD_CASH,
+            'payment_reference' => 'CASH-' . strtoupper(Str::random(10)),
         ]);
-    }
+
+        // Update project
+        $project->update([
+            'base_total'      => $baseTotal,
+            'gst_rate'        => 0,
+            'booking_amount'  => $bookingBase,
+            'booking_gst'     => $bookingGst,
+            'booking_total'   => $bookingTotal,
+
+            // IMPORTANT: use allowed ENUM values
+            'booking_status'  => 'PENDING',
+            'mid_status'      => 'PENDING',
+            'final_status'    => 'PENDING',
+
+            'payment_method'  => 'CASH',
+            'status'          => 'PENDING',
+        ]);
+    });
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Cash booking marked. Awaiting confirmation.',
+        'project' => [
+            'booking_status' => 'PENDING',
+            'status'         => 'PENDING',
+            'booking_amount' => $bookingBase,
+            'booking_gst'    => $bookingGst,
+            'booking_total'  => $bookingTotal,
+        ]
+    ]);
+}
 
     /**
      * Pay Mid Payment - initiates CCAvenue for online
