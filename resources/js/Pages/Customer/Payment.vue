@@ -22,12 +22,18 @@ const props = defineProps({
 
 // State
 const buyingType = ref(props.billingDetails?.buying_type || 'INDIVIDUAL');
+const gstin = ref(props.billingDetails?.gstin || '');
 const businessName = ref(props.billingDetails?.business_name || '');
 const businessAddress = ref(props.billingDetails?.business_address || '');
+const state = ref(props.billingDetails?.state || '');
 const pincode = ref(props.billingDetails?.pincode || '');
 const paymentMethod = ref('ONLINE');
 const isSavingBilling = ref(false);
 const isProcessing = ref(false);
+const gstinError = ref('');
+
+// Constants
+const GST_RATE = 18;
 
 // Formatters
 const formatCurrency = (value) => {
@@ -75,15 +81,39 @@ const milestoneLabel = computed(() => {
     return labels[props.milestone?.name] || props.milestone?.name;
 });
 
+const baseAmount = computed(() => props.milestone?.base_amount || 0);
+const gstAmount = computed(() => props.milestone?.gst_amount || 0);
 const totalAmount = computed(() => props.milestone?.total_amount || 0);
+
+// Validate GSTIN
+const validateGstin = () => {
+    gstinError.value = '';
+    if (buyingType.value === 'BUSINESS') {
+        if (!gstin.value || gstin.value.trim() === '') {
+            gstinError.value = 'GSTIN is required for business purchases';
+            return false;
+        }
+        const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+        if (!gstinRegex.test(gstin.value)) {
+            gstinError.value = 'Invalid GSTIN format. Expected format: 22AAAAA0000A1Z5';
+            return false;
+        }
+    }
+    return true;
+};
 
 // Computed property to check if form is valid
 const isFormValid = computed(() => {
-    return true; // Always valid as no required fields anymore
+    if (buyingType.value === 'BUSINESS') {
+        return validateGstin();
+    }
+    return true;
 });
 
 // Save billing details (only if business type)
 const saveBillingDetails = async () => {
+    if (buyingType.value === 'BUSINESS' && !validateGstin()) return;
+
     if (buyingType.value === 'INDIVIDUAL') {
         // For individual, proceed directly to payment
         processPayment();
@@ -95,8 +125,10 @@ const saveBillingDetails = async () => {
         const response = await axios.post(`/customer/project/${props.project.id}/billing-details`, {
             milestone_type: props.milestone.name,
             buying_type: buyingType.value,
+            gstin: gstin.value,
             business_name: businessName.value,
             business_address: businessAddress.value,
+            state: state.value,
             pincode: pincode.value,
         });
 
@@ -135,8 +167,10 @@ const processPayment = async () => {
             payment_method: paymentMethod.value,
             billing_details: {
                 buying_type: buyingType.value,
+                gstin: buyingType.value === 'BUSINESS' ? gstin.value : null,
                 business_name: businessName.value,
                 business_address: businessAddress.value,
+                state: state.value,
                 pincode: pincode.value,
             },
         });
@@ -158,6 +192,18 @@ const processPayment = async () => {
         isProcessing.value = false;
     }
 };
+
+// Indian states list
+const indianStates = [
+    'Andaman and Nicobar Islands', 'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar',
+    'Chandigarh', 'Chhattisgarh', 'Dadra and Nagar Haveli', 'Daman and Diu', 'Delhi',
+    'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jammu and Kashmir',
+    'Jharkhand', 'Karnataka', 'Kerala', 'Ladakh', 'Lakshadweep',
+    'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
+    'Nagaland', 'Odisha', 'Puducherry', 'Punjab', 'Rajasthan',
+    'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh',
+    'Uttarakhand', 'West Bengal'
+];
 </script>
 
 <template>
@@ -190,8 +236,18 @@ const processPayment = async () => {
                                 <span class="text-sm text-gray-500">{{ milestonePercentage }}% of Total</span>
                             </div>
 
-                            <!-- Amount -->
+                            <!-- Amount Breakdown -->
                             <div class="space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">Base Amount</span>
+                                    <span class="font-medium">{{ formatCurrencyWithDecimals(baseAmount) }}</span>
+                                </div>
+
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">GST @{{ GST_RATE }}%</span>
+                                    <span class="font-medium text-orange-600">{{ formatCurrencyWithDecimals(gstAmount) }}</span>
+                                </div>
+
                                 <div class="border-t border-gray-200 pt-3 mt-3">
                                     <div class="flex justify-between items-center">
                                         <span class="text-xl font-bold text-gray-800">Total Payable</span>
@@ -199,6 +255,11 @@ const processPayment = async () => {
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- GST Note -->
+                            <p class="text-xs text-gray-500 mt-4">
+                                *GST will be shown in invoice. Amount includes GST.
+                            </p>
                         </div>
                     </div>
 
@@ -237,13 +298,30 @@ const processPayment = async () => {
                                 >
                                 <div class="ml-3">
                                     <span class="block font-medium text-gray-800">Buying as Business</span>
-                                    <span class="block text-sm text-gray-500">For business records</span>
+                                    <span class="block text-sm text-gray-500">Claim GST Input Credit</span>
                                 </div>
                             </label>
                         </div>
 
                         <!-- Business Fields (Conditional) -->
                         <div v-if="buyingType === 'BUSINESS'" class="mt-6 space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    GSTIN <span class="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    v-model="gstin"
+                                    @blur="validateGstin"
+                                    placeholder="22AAAAA0000A1Z5"
+                                    maxlength="15"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    :class="{'border-red-500': gstinError}"
+                                >
+                                <p v-if="gstinError" class="text-red-500 text-sm mt-1">{{ gstinError }}</p>
+                                <p class="text-xs text-gray-500 mt-1">15-character GSTIN (e.g., 22AAAAA0000A1Z5)</p>
+                            </div>
+
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
                                 <input
@@ -264,15 +342,27 @@ const processPayment = async () => {
                                 ></textarea>
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Pincode</label>
-                                <input
-                                    type="text"
-                                    v-model="pincode"
-                                    placeholder="123456"
-                                    maxlength="6"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                >
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">State</label>
+                                    <select
+                                        v-model="state"
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    >
+                                        <option value="">Select State</option>
+                                        <option v-for="s in indianStates" :key="s" :value="s">{{ s }}</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Pincode</label>
+                                    <input
+                                        type="text"
+                                        v-model="pincode"
+                                        placeholder="123456"
+                                        maxlength="6"
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    >
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -338,6 +428,14 @@ const processPayment = async () => {
                         <h3 class="text-lg font-bold text-gray-800 mb-4">💰 Payment Summary</h3>
 
                         <div class="space-y-3 mb-6">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">Base Amount</span>
+                                <span class="font-medium">{{ formatCurrencyWithDecimals(baseAmount) }}</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">GST ({{ GST_RATE }}%)</span>
+                                <span class="font-medium text-orange-600">{{ formatCurrencyWithDecimals(gstAmount) }}</span>
+                            </div>
                             <div class="border-t border-gray-200 pt-3 mt-3">
                                 <div class="flex justify-between items-center">
                                     <span class="font-bold text-gray-800">Total</span>
@@ -349,7 +447,7 @@ const processPayment = async () => {
                         <!-- Pay Button -->
                         <button
                             @click="saveBillingDetails"
-                            :disabled="isProcessing || isSavingBilling"
+                            :disabled="isProcessing || isSavingBilling || !isFormValid"
                             class="w-full h-14 text-white text-lg font-bold rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             :class="paymentMethod === 'ONLINE' ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500' : 'bg-orange-500 hover:bg-orange-600 focus:ring-orange-500'"
                         >

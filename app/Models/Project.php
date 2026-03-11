@@ -162,7 +162,7 @@ class Project extends Model
      */
     public function getGstRate(): float
     {
-        return $this->gst_rate ?? (float) Setting::get('gst_rate', 0);
+        return $this->gst_rate ?? (float) Setting::get('gst_rate', 18);
     }
 
     /**
