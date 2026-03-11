@@ -54,6 +54,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        
         // 4. Create Master Data (So the app isn't empty)
         if(MasterSurface::count() == 0) {
             MasterSurface::create(['name' => 'Interior Wall', 'category' => 'INTERIOR', 'unit_type' => 'AREA']);
