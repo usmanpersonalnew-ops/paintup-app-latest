@@ -1,25 +1,38 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { router } from '@inertiajs/vue3';
-import { watch, ref } from 'vue';
+import { watch, ref, computed } from 'vue';
 
 const props = defineProps({
-    products: Array,
-    brands: Array,
-    filters: Object
+    products: {
+        type: Array,
+        default: () => []
+    },
+    brands: {
+        type: Array,
+        default: () => []
+    },
+    filters: {
+        type: Object,
+        default: () => ({})
+    }
 });
 
-const search = ref(props.filters.search || '');
-const brand = ref(props.filters.brand || '');
-const tier = ref(props.filters.tier || '');
+const search = ref(props.filters?.search || '');
+const brand = ref(props.filters?.brand || '');
+const tier = ref(props.filters?.tier || '');
 
-// Auto-trigger filters
+// Auto-trigger filters with debounce to avoid too many requests
+let timeout = null;
 watch([search, brand, tier], () => {
-    router.get(route('admin.products.index'), {
-        search: search.value,
-        brand: brand.value,
-        tier: tier.value
-    }, { preserveState: true, replace: true });
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+        router.get(route('admin.products.index'), {
+            search: search.value,
+            brand: brand.value,
+            tier: tier.value
+        }, { preserveState: true, replace: true });
+    }, 300); // 300ms debounce
 });
 
 const reset = () => {
@@ -29,8 +42,25 @@ const reset = () => {
 };
 
 const deleteProduct = (product) => {
-    if (!confirm(`Delete "${product.name}"? This cannot be undone.`)) return;
+    if (!confirm(`Delete "${product?.name || 'this product'}"? This cannot be undone.`)) return;
     router.delete(route('admin.products.destroy', product.id));
+};
+
+// Computed property for safe tier display
+const formatTier = (tier) => {
+    if (!tier) return '';
+    return tier.replace('_', ' ');
+};
+
+// Computed property for tier badge classes
+const getTierClass = (tier) => {
+    const classes = {
+        'ECONOMY': 'bg-green-100 text-green-700',
+        'PREMIUM': 'bg-blue-100 text-blue-700',
+        'LUXURY': 'bg-purple-100 text-purple-700',
+        'ULTRA_LUXURY': 'bg-yellow-100 text-yellow-800'
+    };
+    return classes[tier] || 'bg-gray-100 text-gray-700';
 };
 </script>
 
@@ -84,33 +114,30 @@ const deleteProduct = (product) => {
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
-                    <tr v-for="product in products" :key="product.id" class="hover:bg-gray-50 transition">
-                        <td class="p-4 font-medium text-gray-800">{{ product.name }}</td>
-                        <td class="p-4 text-gray-600">{{ product.brand }}</td>
+                    <tr v-for="product in products" :key="product?.id || Math.random()" class="hover:bg-gray-50 transition">
+                        <td class="p-4 font-medium text-gray-800">{{ product?.name || 'Unnamed Product' }}</td>
+                        <td class="p-4 text-gray-600">{{ product?.brand || '—' }}</td>
                         <td class="p-4">
-                            <span class="px-2 py-1 rounded text-xs font-bold"
-                                :class="{
-                                    'bg-green-100 text-green-700': product.tier === 'ECONOMY',
-                                    'bg-blue-100 text-blue-700': product.tier === 'PREMIUM',
-                                    'bg-purple-100 text-purple-700': product.tier === 'LUXURY',
-                                    'bg-yellow-100 text-yellow-800': product.tier === 'ULTRA_LUXURY'
-                                }">
-                                {{ product.tier.replace('_', ' ') }}
+                            <span v-if="product?.tier" class="px-2 py-1 rounded text-xs font-bold" :class="getTierClass(product.tier)">
+                                {{ formatTier(product.tier) }}
+                            </span>
+                            <span v-else class="px-2 py-1 rounded text-xs font-bold bg-gray-100 text-gray-700">
+                                —
                             </span>
                         </td>
                         <td class="p-4">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                                :class="product.systems_count > 0 ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-800'">
-                                {{ product.systems_count }} Systems
+                                :class="product?.systems_count > 0 ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-800'">
+                                {{ product?.systems_count || 0 }} Systems
                             </span>
                         </td>
                         <td class="p-4 text-right space-x-2">
-                            <a :href="route('admin.products.edit', product.id)" class="text-blue-600 hover:text-blue-900 font-medium text-sm">Edit</a>
-                            <span class="text-gray-300">|</span>
-                            <button type="button" @click="deleteProduct(product)" class="text-red-600 hover:text-red-900 font-medium text-sm">Delete</button>
+                            <a v-if="product?.id" :href="route('admin.products.edit', product.id)" class="text-blue-600 hover:text-blue-900 font-medium text-sm">Edit</a>
+                            <span v-if="product?.id" class="text-gray-300">|</span>
+                            <button v-if="product?.id" type="button" @click="deleteProduct(product)" class="text-red-600 hover:text-red-900 font-medium text-sm">Delete</button>
                         </td>
                     </tr>
-                    <tr v-if="products.length === 0">
+                    <tr v-if="!products || products.length === 0">
                         <td colspan="5" class="p-8 text-center text-gray-400 italic">
                             No products found. Try changing filters or add a new one.
                         </td>
