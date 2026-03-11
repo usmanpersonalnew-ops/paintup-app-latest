@@ -270,7 +270,6 @@ class CustomerPaymentController extends Controller
      */
     public function payMidPayment(Request $request, Project $project)
     {
-
         $request->validate([
             'payment_method' => 'required|in:ONLINE,CASH',
             'billing_details' => 'nullable|array',
@@ -296,8 +295,6 @@ class CustomerPaymentController extends Controller
                     }
                 }
 
-                $orderId = 'PAINTUP-' . $project->id . '-MID-' . time();
-
                 BillingDetail::updateOrCreate(
                     ['project_id' => $project->id, 'milestone_type' => 'mid'],
                     [
@@ -305,9 +302,8 @@ class CustomerPaymentController extends Controller
                         'gstin' => $billingData['gstin'] ?? null,
                         'business_name' => $billingData['business_name'] ?? null,
                         'business_address' => $billingData['business_address'] ?? null,
-                        'state' => 'pending',
+                        'state' => $billingData['state'] ?? null,
                         'pincode' => $billingData['pincode'] ?? null,
-                        'order_id' => $orderId,
                     ]
                 );
             }
@@ -368,7 +364,7 @@ class CustomerPaymentController extends Controller
                 ]);
             }
 
-
+            $orderId = 'PAINTUP-' . $project->id . '-MID-' . time();
             $customerName = $project->client_name;
             $customerEmail = $project->customer->email ?? 'customer@example.com';
             $customerPhone = $project->phone;
@@ -423,16 +419,6 @@ class CustomerPaymentController extends Controller
             ]);
         }
     }
-
-
-
-public function checkAndUpdateStatus($orderId)
-{
-    $status = $this->paymentGateway->getOrderStatus($orderId);
-
-    dd($status);
-}
-
 
     /**
      * Pay Final Payment - initiates CCAvenue for online
@@ -703,11 +689,11 @@ public function checkAndUpdateStatus($orderId)
     public function showPaymentPage(Project $project, string $milestone)
     {
         // Check authentication
-        if (!Auth::guard('customer')->check()) {
+        if (!\Illuminate\Support\Facades\Auth::guard('customer')->check()) {
             return redirect()->route('customer.login');
         }
 
-        $customer = Auth::guard('customer')->user();
+        $customer = \Illuminate\Support\Facades\Auth::guard('customer')->user();
 
         // Verify this project belongs to the customer
         if ($project->phone !== $customer->phone) {
@@ -743,7 +729,6 @@ public function checkAndUpdateStatus($orderId)
             return redirect()->route('customer.dashboard')
                 ->with('error', 'Please complete mid payment first');
         }
-
 
         // Calculate milestone amounts
         $milestoneData = $project->calculateMilestoneWithGst($milestone);

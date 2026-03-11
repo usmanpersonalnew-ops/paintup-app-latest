@@ -69,7 +69,7 @@ class ProjectController extends Controller
 
         // Calculate pricing breakdown
         $subtotal = $validated['total_amount'] ?? 0;
-        $gstRate = 0; // Default GST rate
+        $gstRate = 18; // Default GST rate
         $gstAmount = round($subtotal * ($gstRate / 100), 2);
         $grandTotal = $subtotal + $gstAmount;
 
