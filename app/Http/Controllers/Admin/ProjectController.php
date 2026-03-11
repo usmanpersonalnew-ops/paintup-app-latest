@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Project;
-use App\Models\User;
 use App\Services\Msg91WhatsappService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -17,12 +16,12 @@ class ProjectController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Project::query();
+        $query = \App\Models\Project::query();
 
         if ($request->search) {
-            $query->where('client_name', 'like', '%' . $request->search . '%')
-                ->orWhere('phone', 'like', '%' . $request->search . '%')
-                ->orWhere('location', 'like', '%' . $request->search . '%');
+            $query->where('client_name', 'like', '%'.$request->search.'%')
+                  ->orWhere('phone', 'like', '%'.$request->search.'%')
+                  ->orWhere('location', 'like', '%'.$request->search.'%');
         }
 
         if ($request->status) {
@@ -40,7 +39,7 @@ class ProjectController extends Controller
      */
     public function create()
     {
-        $supervisors = User::role('supervisor')
+        $supervisors = \App\Models\User::where('role', 'SUPERVISOR')
             ->where('status', 'ACTIVE')
             ->select('id', 'name', 'email')
             ->get();
@@ -57,7 +56,7 @@ class ProjectController extends Controller
     {
         $validated = $request->validate([
             'client_name' => 'required|string|max:255',
-            'phone' => 'required|numeric|min:1000000000|max:9999999999',
+            'phone' => 'required|string|max:20',
             'location' => 'required|string|max:500',
             'total_amount' => 'nullable|numeric',
             'supervisor_id' => 'nullable|integer|exists:users,id',
@@ -69,7 +68,7 @@ class ProjectController extends Controller
 
         // Calculate pricing breakdown
         $subtotal = $validated['total_amount'] ?? 0;
-        $gstRate = 0; // Default GST rate
+        $gstRate = 18; // Default GST rate
         $gstAmount = round($subtotal * ($gstRate / 100), 2);
         $grandTotal = $subtotal + $gstAmount;
 
@@ -80,16 +79,7 @@ class ProjectController extends Controller
             'final_payment_amount' => $grandTotal > 0 ? round($grandTotal * 0.20, 2) : 0,
         ];
 
-        $user = User::firstOrCreate([
-            'phone' => $validated['phone'],
-        ], [
-            'name' => $validated['client_name'],
-            'email' => $validated['email'] ?? null,
-            'status' => 'ACTIVE',
-            'password' => bcrypt('123456'), // Set a default password or generate one
-        ]);
-
-        Project::create([
+        $project = Project::create([
             'client_name' => $validated['client_name'],
             'phone' => $validated['phone'],
             'location' => $validated['location'],
@@ -264,7 +254,8 @@ class ProjectController extends Controller
                         } else {
                             $service->custom_name = 'Additional Service';
                         }
-                    } else {
+                    }
+                    else {
                         $service->custom_name = 'Additional Service';
                     }
                 }

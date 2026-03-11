@@ -1,5 +1,4 @@
 <?php
-// database/migrations/xxxx_xx_xx_xxxxxx_create_master_products_table.php
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -16,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('brand');
-            $table->foreignId('tier_id')->nullable()->constrained('tiers')->nullOnDelete();
+            $table->enum('tier', ['ECONOMY', 'PREMIUM', 'LUXURY', 'ULTRA_LUXURY']);
             $table->timestamps();
         });
     }

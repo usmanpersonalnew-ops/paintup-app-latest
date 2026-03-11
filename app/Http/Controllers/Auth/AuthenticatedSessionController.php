@@ -30,26 +30,27 @@ class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
+
         $request->session()->regenerate();
 
+        // Role-based redirect after login - FORCE direct paths to avoid redirect loops
         $user = $request->user();
-
-        if ($user->hasRole('admin')) {
-            return redirect()->route('admin.dashboard');
+        
+        if ($user) {
+            if ($user->role === 'ADMIN') {
+                return redirect()->intended('/admin/projects');
+            } elseif ($user->role === 'SUPERVISOR') {
+                return redirect()->intended('/supervisor/projects');
+            } else {
+                // Invalid role - logout and redirect to login with error
+                Auth::logout();
+                return redirect()->route('login')
+                    ->withErrors(['email' => 'Invalid user role. Please contact support.']);
+            }
         }
 
-        if ($user->hasRole('supervisor')) {
-            return redirect()->route('supervisor.dashboard');
-        }
-
-        // If user has no valid role
-        Auth::logout();
-
-        return redirect()
-            ->route('login')
-            ->withErrors([
-                'email' => 'You do not have access permission.'
-            ]);
+        // Fallback - should not reach here if auth was successful
+        return redirect()->route('login');
     }
 
     /**

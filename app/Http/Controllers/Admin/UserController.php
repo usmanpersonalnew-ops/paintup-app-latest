@@ -51,34 +51,37 @@ class UserController extends Controller
         return Inertia::render('Admin/Users/Create');
     }
 
-        public function store(Request $request)
+    /**
+     * Store a newly created user.
+     */
+    public function store(Request $request)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'phone' => 'required|string|max:20',
             'role' => 'required|string|in:ADMIN,SUPERVISOR',
-            'password' => 'required|string|min:8|confirmed',
             'send_credentials' => 'boolean',
         ]);
+
+        // Generate temporary password
+        $temporaryPassword = Str::random(12);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'phone' => $validated['phone'],
-            'password' => Hash::make($validated['password']),
+            'password' => Hash::make($temporaryPassword),
+            'role' => $validated['role'],
             'status' => 'ACTIVE',
         ]);
-
-        // Assign role using Spatie
-        $user->assignRole($validated['role']);
 
         // Send credentials email if requested
         if ($request->boolean('send_credentials')) {
             $loginUrl = route('login');
             $user->notify(new UserCredentialsNotification(
                 $user->email,
-                $validated['password'],
+                $temporaryPassword,
                 $loginUrl
             ));
         }
@@ -94,9 +97,6 @@ class UserController extends Controller
     {
         $currentUser = auth()->user();
 
-        // Get user's role from Spatie
-        $userRole = $user->roles->first()?->name ?? '';
-
         // Prevent editing self
         $canEditRole = $currentUser->id !== $user->id;
         $canEditStatus = $currentUser->id !== $user->id;
@@ -107,7 +107,7 @@ class UserController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'phone' => $user->phone,
-                'role' => $userRole, // From Spatie
+                'role' => $user->role,
                 'status' => $user->status,
             ],
             'permissions' => [
@@ -140,34 +140,14 @@ class UserController extends Controller
             $rules['status'] = 'required|string|in:ACTIVE,INACTIVE';
         }
 
-        // Add password validation only if password is provided
-        if ($request->filled('password')) {
-            $rules['password'] = 'required|string|min:8|confirmed';
-        }
-
         $validated = $request->validate($rules);
 
-        $updateData = [
+        $user->update([
             'name' => $validated['name'],
             'phone' => $validated['phone'],
-        ];
-
-        // Add status if allowed and provided
-        if (isset($validated['status'])) {
-            $updateData['status'] = $validated['status'];
-        }
-
-        // Add password if provided
-        if (isset($validated['password'])) {
-            $updateData['password'] = Hash::make($validated['password']);
-        }
-
-        $user->update($updateData);
-
-        // Update role using Spatie if allowed and provided
-        if ($currentUser->id !== $user->id && isset($validated['role'])) {
-            $user->syncRoles([$validated['role']]);
-        }
+            'role' => $validated['role'] ?? $user->role,
+            'status' => $validated['status'] ?? $user->status,
+        ]);
 
         return redirect()->route('admin.users.index')
             ->with('success', 'User updated successfully.');

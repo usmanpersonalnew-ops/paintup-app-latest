@@ -6,7 +6,6 @@ use App\Models\ProjectRoom;
 use App\Models\QuoteItem;
 use App\Models\MasterSurface;
 use App\Models\MasterPaintingSystem;
-use App\Models\Tier;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -18,16 +17,10 @@ class QuoteItemController extends Controller
      */
     public function create(ProjectRoom $projectRoom)
     {
-        // Load surfaces with their products and systems, including tier relationship
-        $surfaces = MasterSurface::with([
-            'products' => function ($q) {
-                $q->with('tier')  // Load tier for each product
-                    ->with('systems');
-            }
-        ])->get();
-
-        // Get all tiers for dynamic filtering
-        $tiers = Tier::all();
+        // Load surfaces with their products and systems
+        $surfaces = MasterSurface::with(['products' => function($q) {
+            $q->with('systems');
+        }])->get();
 
         // Harden: Add explicit has_products flag to each surface
         // This ensures frontend can deterministically handle surfaces with/without products
@@ -46,12 +39,9 @@ class QuoteItemController extends Controller
 
         return Inertia::render('Supervisor/Paint/Create', [
             'zone' => $projectRoom,
-            'surfaces' => $surfaces,
-            'tiers' => $tiers, // Pass tiers to frontend
+            'surfaces' => $surfaces
         ]);
     }
-
-
 
     /**
      * Screen C: Add Paint Item - POST
@@ -122,16 +112,10 @@ class QuoteItemController extends Controller
      */
     public function edit(ProjectRoom $projectRoom, QuoteItem $item)
     {
-        // Load surfaces with their products and systems, including tier relationship
-        $surfaces = MasterSurface::with([
-            'products' => function ($q) {
-                $q->with('tier')  // Load tier for each product
-                    ->with('systems');
-            }
-        ])->get();
-
-        // Get all tiers for dynamic filtering
-        $tiers = Tier::all();
+        // Load surfaces with their products and systems
+        $surfaces = MasterSurface::with(['products' => function($q) {
+            $q->with('systems');
+        }])->get();
 
         // Harden: Add explicit has_products flag to each surface
         $surfaces = $surfaces->map(function ($surface) {
@@ -148,12 +132,11 @@ class QuoteItemController extends Controller
         });
 
         // Load item relationships
-        $item->load(['surface', 'product.tier', 'system']); // Load product.tier
+        $item->load(['surface', 'product', 'system']);
 
         return Inertia::render('Supervisor/Paint/Create', [
             'zone' => $projectRoom,
             'surfaces' => $surfaces,
-            'tiers' => $tiers, // Pass tiers to frontend
             'editItem' => $item,
         ]);
     }
@@ -239,7 +222,7 @@ class QuoteItemController extends Controller
 
         // Use room default dimensions if ROOM_DEFAULT
         if ($measurementSource === 'ROOM_DEFAULT') {
-            return match ($unitType) {
+            return match($unitType) {
                 'AREA' => $this->calculateRoomArea($projectRoom),
                 'LINEAR' => $projectRoom->length ?? 0,
                 'COUNT' => 1,
@@ -249,10 +232,10 @@ class QuoteItemController extends Controller
         }
 
         // Manual measurements
-        return match ($unitType) {
+        return match($unitType) {
             'AREA' => $request->manual_area_mode === 'DIRECT'
-            ? ($request->direct_area ?? 0)
-            : (($request->length ?? 0) * ($request->height ?? 0)),
+                ? ($request->direct_area ?? 0)
+                : (($request->length ?? 0) * ($request->height ?? 0)),
             'LINEAR' => $request->length ?? 0,
             'COUNT' => $request->quantity ?? 1,
             'LUMPSUM' => 1,

@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('quote_services', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('project_room_id')->constrained('project_rooms')->onDelete('cascade');
+            $table->foreignId('project_zone_id')->constrained()->onDelete('cascade');
             $table->foreignId('master_service_id')->nullable()->constrained()->onDelete('set null');
             $table->string('custom_name');
             $table->string('unit_type');

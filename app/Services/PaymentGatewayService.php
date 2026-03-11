@@ -109,35 +109,6 @@ class PaymentGatewayService
         return $result['access_token'];
     }
 
-
-    public function getOrderStatus(string $orderId)
-    {
-
-        $token = $this->getPhonePeAccessToken();
-
-        $url = "https://api-preprod.phonepe.com/apis/pg-sandbox/checkout/v2/order/{$orderId}/status";
-
-        $response = Http::withHeaders([
-            'Content-Type' => 'application/json',
-            'Authorization' => 'O-Bearer ' . $token,
-        ])->get($url, [
-                    'details' => 'false'
-                ]);
-
-        $result = $response->json();
-
-        if (!$response->successful()) {
-            Log::error('PhonePe Status API Failed', [
-                'orderId' => $orderId,
-                'response' => $result
-            ]);
-
-            throw new \Exception('PhonePe status API failed');
-        }
-
-        return $result;
-    }
-
     protected function createPhonePePayment(Project $project, string $paymentPurpose, float $amount): array
     {
         $config = config('paymentgateways.phonepe');
@@ -147,23 +118,17 @@ class PaymentGatewayService
         }
 
         if (empty($config['client_id']) || empty($config['client_secret'])) {
-            throw new \Exception('PhonePe V2 credentials missing.');
+            throw new \Exception('PhonePe V2 credentials missing. Set PHONEPE_CLIENT_ID and PHONEPE_CLIENT_SECRET in .env (from PhonePe Dashboard > Developer Settings).');
         }
 
-        // Create Order ID
+        // merchantOrderId: max 63 chars, only _ and - allowed
         $merchantOrderId = 'PU-' . $project->id . '-' . strtoupper($paymentPurpose) . '-' . time();
-
         $amountPaisa = (int) round($amount * 100);
-
         if ($amountPaisa < 100) {
-            throw new \Exception('Amount must be at least ₹1');
+            throw new \Exception('Amount must be at least ₹1 (100 paisa).');
         }
 
-        // Redirect URL WITH ORDER ID
-        $redirectUrl = route('customer.payment.callback', [
-            'gateway' => 'phonepe',
-            'order_id' => $merchantOrderId
-        ]);
+        $redirectUrl = route('customer.payment.callback', ['gateway' => 'phonepe']);
 
         $body = [
             'merchantOrderId' => $merchantOrderId,
@@ -171,58 +136,46 @@ class PaymentGatewayService
             'paymentFlow' => [
                 'type' => 'PG_CHECKOUT',
                 'merchantUrls' => [
-                    'redirectUrl' => $redirectUrl
-                ]
-            ]
+                    'redirectUrl' => $redirectUrl,
+                ],
+            ],
         ];
 
         $isSandbox = ($config['environment'] ?? 'sandbox') === 'sandbox';
-
         $payUrl = $isSandbox
             ? 'https://api-preprod.phonepe.com/apis/pg-sandbox/checkout/v2/pay'
             : 'https://api.phonepe.com/apis/pg/checkout/v2/pay';
 
         try {
-
             $token = $this->getPhonePeAccessToken();
-
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
-                'Authorization' => 'O-Bearer ' . $token
+                'Authorization' => 'O-Bearer ' . $token,
             ])->post($payUrl, $body);
 
             $result = $response->json();
 
             if ($response->successful() && !empty($result['redirectUrl'])) {
-
                 return [
                     'success' => true,
                     'gateway' => 'phonepe',
                     'transaction_id' => $merchantOrderId,
                     'payment_url' => $result['redirectUrl'],
                     'amount' => $amount,
-                    'purpose' => $paymentPurpose
+                    'purpose' => $paymentPurpose,
                 ];
             }
 
-            Log::error('PhonePe payment creation failed', [
-                'response' => $result
-            ]);
-
+            Log::error('PhonePe payment creation failed', ['response' => $result]);
             return [
                 'success' => false,
-                'error' => $result['message'] ?? 'Payment creation failed'
+                'error' => $result['message'] ?? $result['code'] ?? 'Payment creation failed',
             ];
-
         } catch (\Exception $e) {
-
-            Log::error('PhonePe payment error', [
-                'exception' => $e->getMessage()
-            ]);
-
+            Log::error('PhonePe payment error', ['exception' => $e->getMessage()]);
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }

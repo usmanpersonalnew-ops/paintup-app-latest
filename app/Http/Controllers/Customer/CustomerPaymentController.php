@@ -122,7 +122,6 @@ class CustomerPaymentController extends Controller
                 'message' => 'Online payment is currently disabled. Please contact support.',
             ], 400);
         }
-        
 
         // Recalculate totals if base_total is missing or zero
         if (empty($project->base_total) || $project->base_total == 0) {
@@ -207,67 +206,6 @@ class CustomerPaymentController extends Controller
         ]);
     }
 
-
-    public function callback(Request $request, $gateway)
-    {
-        $orderId = $request->get('order_id');
-
-        if (!$orderId) {
-            abort(400, 'Order ID missing');
-        }
-
-        $paymentService = new PaymentGatewayService();
-
-        try {
-
-            $result = $paymentService->getOrderStatus($orderId);
-            
-
-            if (!$result) {
-                return redirect()->route('customer.payment.failed');
-            }
-
-            $state = $result['state'] ?? null;
-
-            if ($state === 'COMPLETED') {
-
-                // Extract Project ID from OrderId
-                preg_match('/PU-(\d+)-/', $orderId, $matches);
-                $projectId = $matches[1] ?? null;
-
-                if ($projectId) {
-
-                    $project = Project::find($projectId);
-
-                    if ($project) {
-
-                        $project->payment_status = 'paid';
-                        $project->save();
-                    }
-                }
-
-                return redirect()->route('customer.payment.success');
-
-            } elseif ($state === 'FAILED') {
-
-                return redirect()->route('customer.payment.failed');
-
-            } else {
-
-                return redirect()->route('customer.payment.pending');
-            }
-
-        } catch (\Exception $e) {
-
-            Log::error('Payment callback error', [
-                'error' => $e->getMessage()
-            ]);
-
-            return redirect()->route('customer.payment.failed');
-        }
-    }
-
-
     /**
      * Cash Booking Payment
      * POST /customer/project/{project}/booking/cash
@@ -332,7 +270,6 @@ class CustomerPaymentController extends Controller
      */
     public function payMidPayment(Request $request, Project $project)
     {
-
         $request->validate([
             'payment_method' => 'required|in:ONLINE,CASH',
             'billing_details' => 'nullable|array',
@@ -358,22 +295,17 @@ class CustomerPaymentController extends Controller
                     }
                 }
 
-                $orderId = 'PAINTUP-' . $project->id . '-MID-' . time();
-                // dd($orderId);
-
-                $billing = BillingDetail::updateOrCreate(
+                BillingDetail::updateOrCreate(
                     ['project_id' => $project->id, 'milestone_type' => 'mid'],
                     [
                         'buying_type' => $billingData['buying_type'],
                         'gstin' => $billingData['gstin'] ?? null,
                         'business_name' => $billingData['business_name'] ?? null,
                         'business_address' => $billingData['business_address'] ?? null,
-                        'state' => 'pending',
+                        'state' => $billingData['state'] ?? null,
                         'pincode' => $billingData['pincode'] ?? null,
-                        'order_id' => $orderId,
                     ]
                 );
-
             }
         }
 
@@ -408,7 +340,6 @@ class CustomerPaymentController extends Controller
             $gateway = $this->getActiveGateway();
 
             if ($gateway === 'phonepe') {
-                // dd('here');
                 $result = $this->paymentGateway->createPayment($project, 'mid', $midTotal);
                 if (empty($result['success']) || empty($result['payment_url'])) {
                     return response()->json([
@@ -433,7 +364,7 @@ class CustomerPaymentController extends Controller
                 ]);
             }
 
-
+            $orderId = 'PAINTUP-' . $project->id . '-MID-' . time();
             $customerName = $project->client_name;
             $customerEmail = $project->customer->email ?? 'customer@example.com';
             $customerPhone = $project->phone;
@@ -488,16 +419,6 @@ class CustomerPaymentController extends Controller
             ]);
         }
     }
-
-
-
-    public function checkAndUpdateStatus($orderId)
-    {
-        $status = $this->paymentGateway->getOrderStatus($orderId);
-
-        dd($status);
-    }
-
 
     /**
      * Pay Final Payment - initiates CCAvenue for online
@@ -768,11 +689,11 @@ class CustomerPaymentController extends Controller
     public function showPaymentPage(Project $project, string $milestone)
     {
         // Check authentication
-        if (!Auth::guard('customer')->check()) {
+        if (!\Illuminate\Support\Facades\Auth::guard('customer')->check()) {
             return redirect()->route('customer.login');
         }
 
-        $customer = Auth::guard('customer')->user();
+        $customer = \Illuminate\Support\Facades\Auth::guard('customer')->user();
 
         // Verify this project belongs to the customer
         if ($project->phone !== $customer->phone) {
@@ -808,7 +729,6 @@ class CustomerPaymentController extends Controller
             return redirect()->route('customer.dashboard')
                 ->with('error', 'Please complete mid payment first');
         }
-
 
         // Calculate milestone amounts
         $milestoneData = $project->calculateMilestoneWithGst($milestone);
