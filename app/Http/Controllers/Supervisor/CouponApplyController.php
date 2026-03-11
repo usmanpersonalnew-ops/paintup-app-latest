@@ -79,7 +79,7 @@ class CouponApplyController extends Controller
         $subtotal = $paintTotal + $serviceTotal;
         
         // Calculate GST (18%) to get Grand Total
-        $gstRate = 18;
+        $gstRate = 0;
         $gstAmount = $subtotal * ($gstRate / 100);
         $grandTotal = $subtotal + $gstAmount;
 

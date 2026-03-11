@@ -8,7 +8,7 @@
 $paint_total = 18000;
 $services_total = 3000;
 $discount = 600;
-$gst_rate = 18;
+$gst_rate = 0;
 
 // Calculate base_total (Single Source of Truth)
 $base_total = $paint_total + $services_total - $discount;

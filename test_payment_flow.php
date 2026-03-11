@@ -125,7 +125,7 @@ $totalPaintAmount = $room->items->sum('amount');
 $totalServiceAmount = $room->services->sum('amount');
 $discountAmount = $project->discount_amount ?? 0;
 $baseTotal = $totalPaintAmount + $totalServiceAmount - $discountAmount;
-$gstRate = 18;
+$gstRate = 0;
 $gstAmount = round($baseTotal * ($gstRate / 100), 2);
 $totalWithGst = $baseTotal + $gstAmount;
 
