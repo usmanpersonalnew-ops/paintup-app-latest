@@ -206,6 +206,67 @@ class CustomerPaymentController extends Controller
         ]);
     }
 
+
+    public function callback(Request $request, $gateway)
+    {
+        $orderId = $request->get('order_id');
+
+        if (!$orderId) {
+            abort(400, 'Order ID missing');
+        }
+
+        $paymentService = new PaymentGatewayService();
+
+        try {
+
+            $result = $paymentService->getOrderStatus($orderId);
+            
+
+            if (!$result) {
+                return redirect()->route('customer.payment.failed');
+            }
+
+            $state = $result['state'] ?? null;
+
+            if ($state === 'COMPLETED') {
+
+                // Extract Project ID from OrderId
+                preg_match('/PU-(\d+)-/', $orderId, $matches);
+                $projectId = $matches[1] ?? null;
+
+                if ($projectId) {
+
+                    $project = Project::find($projectId);
+
+                    if ($project) {
+
+                        $project->payment_status = 'paid';
+                        $project->save();
+                    }
+                }
+
+                return redirect()->route('customer.payment.success');
+
+            } elseif ($state === 'FAILED') {
+
+                return redirect()->route('customer.payment.failed');
+
+            } else {
+
+                return redirect()->route('customer.payment.pending');
+            }
+
+        } catch (\Exception $e) {
+
+            Log::error('Payment callback error', [
+                'error' => $e->getMessage()
+            ]);
+
+            return redirect()->route('customer.payment.failed');
+        }
+    }
+
+
     /**
      * Cash Booking Payment
      * POST /customer/project/{project}/booking/cash
@@ -426,12 +487,12 @@ class CustomerPaymentController extends Controller
 
 
 
-public function checkAndUpdateStatus($orderId)
-{
-    $status = $this->paymentGateway->getOrderStatus($orderId);
+    public function checkAndUpdateStatus($orderId)
+    {
+        $status = $this->paymentGateway->getOrderStatus($orderId);
 
-    dd($status);
-}
+        dd($status);
+    }
 
 
     /**
