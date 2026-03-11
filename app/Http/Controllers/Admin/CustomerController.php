@@ -6,108 +6,63 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Illuminate\Support\Facades\Hash;
 
 class CustomerController extends Controller
 {
     /**
-     * Display customers list
+     * Display a listing of the resource.
      */
     public function index()
     {
-        $customers = User::role('customer')
-            ->latest()
-            ->paginate(2);
-
-        return Inertia::render('Admin/Customers/Index', [
-            'customers' => $customers
-        ]);
+        $customers = User::role('customer')->latest()->paginate(10);
+        return Inertia::render('Admin/Customers/Index', ['customers' => $customers]);
     }
 
     /**
-     * Show create form
+     * Show the form for creating a new resource.
      */
     public function create()
     {
-        return Inertia::render('Admin/Customers/Create');
+        //
     }
 
     /**
-     * Store new customer
+     * Store a newly created resource in storage.
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'phone' => 'required',
-            'password' => 'required|min:6',
-        ]);
-
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'password' => Hash::make($request->password),
-            'status' => 'ACTIVE',
-        ]);
-
-        $user->assignRole('customer');
-
-        return redirect()->route('admin.customers.index')
-            ->with('success', 'Customer created successfully');
+        //
     }
 
     /**
-     * Show customer details
+     * Display the specified resource.
      */
-    public function show(User $customer)
+    public function show(string $id)
     {
-        return Inertia::render('Admin/Customers/Show', [
-            'customer' => $customer
-        ]);
+        //
     }
 
     /**
-     * Show edit form
+     * Show the form for editing the specified resource.
      */
-    public function edit(User $customer)
+    public function edit(string $id)
     {
-        return Inertia::render('Admin/Customers/Edit', [
-            'customer' => $customer
-        ]);
+        //
     }
 
     /**
-     * Update customer
+     * Update the specified resource in storage.
      */
-    public function update(Request $request, User $customer)
+    public function update(Request $request, string $id)
     {
-        $request->validate([
-            'name' => 'required',
-            'email' => 'required|email|unique:users,email,' . $customer->id,
-            'phone' => 'required',
-        ]);
-
-        $customer->update([
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'status' => $request->status ?? 'ACTIVE'
-        ]);
-
-        return redirect()->route('admin.customers.index')
-            ->with('success', 'Customer updated successfully');
+        //
     }
 
     /**
-     * Delete customer
+     * Remove the specified resource from storage.
      */
-    public function destroy(User $customer)
+    public function destroy(string $id)
     {
-        $customer->delete();
-
-        return redirect()->route('admin.customers.index')
-            ->with('success', 'Customer deleted successfully');
+        //
     }
 }

@@ -1,9 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminDashboardController;
-use App\Http\Controllers\Admin\AdminProfileController;
 use App\Http\Controllers\Admin\AdminProjectWorkController;
-use App\Http\Controllers\Admin\AdminWarrantyController;
 use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\GoogleDriveController;
@@ -17,27 +15,15 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProjectController;
 use App\Http\Controllers\Admin\ProjectPhotoController as AdminProjectPhotoController;
 use App\Http\Controllers\Admin\QuoteController;
-use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SurfaceController;
 use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Customer\CustomerAuthController;
-use App\Http\Controllers\Customer\CustomerDashboardController;
-use App\Http\Controllers\Customer\CustomerInvoiceController;
-use App\Http\Controllers\Customer\CustomerPaymentController;
-use App\Http\Controllers\Customer\CustomerProfileController;
-use App\Http\Controllers\Customer\CustomerQuoteController;
-use App\Http\Controllers\Customer\CustomerWarrantyController;
-use App\Http\Controllers\Customer\DebugDashboardController;
-use App\Http\Controllers\Payment\CCavenueController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\Supervisor\CouponApplyController;
 use App\Http\Controllers\Supervisor\PaymentController as SupervisorPaymentController;
 use App\Http\Controllers\Supervisor\ProjectController as SupervisorProjectController;
 use App\Http\Controllers\Supervisor\ProjectPhotoController;
 use App\Http\Controllers\Supervisor\ProjectRoomController;
 use App\Http\Controllers\Supervisor\QuoteItemController;
 use App\Http\Controllers\Supervisor\ServiceController;
-use App\Http\Controllers\Supervisor\SummaryController;
 use App\Http\Controllers\Supervisor\SupervisorAuthController;
 use App\Http\Controllers\Supervisor\SupervisorProjectWorkController;
 use App\Http\Controllers\Supervisor\ZoneDashboardController;
@@ -73,9 +59,9 @@ Route::prefix('admin')->middleware(['auth:web', 'verified', 'checkRole:admin'])-
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
 
     // Admin Profile Routes
-    Route::get('/profile', [AdminProfileController::class, 'edit'])->name('admin.profile.edit');
-    Route::patch('/profile', [AdminProfileController::class, 'update'])->name('admin.profile.update');
-    Route::put('/profile/password', [AdminProfileController::class, 'updatePassword'])->name('admin.profile.password.update');
+    Route::get('/profile', [\App\Http\Controllers\Admin\AdminProfileController::class, 'edit'])->name('admin.profile.edit');
+    Route::patch('/profile', [\App\Http\Controllers\Admin\AdminProfileController::class, 'update'])->name('admin.profile.update');
+    Route::put('/profile/password', [\App\Http\Controllers\Admin\AdminProfileController::class, 'updatePassword'])->name('admin.profile.password.update');
 
     // Surface CRUD
     Route::resource('surfaces', SurfaceController::class)->names('admin.surfaces');
@@ -151,12 +137,12 @@ Route::prefix('admin')->middleware(['auth:web', 'verified', 'checkRole:admin'])-
     Route::get('/projects/{project}/invoice/new', [AdminInvoiceController::class, 'view'])->name('admin.invoice.new');
 
     // Warranty Routes
-    Route::get('/projects/{project}/warranty', [AdminWarrantyController::class, 'view'])->name('admin.warranty.view');
-    Route::get('/projects/{project}/warranty/download', [AdminWarrantyController::class, 'view'])->name('admin.warranty.download');
+    Route::get('/projects/{project}/warranty', [\App\Http\Controllers\Admin\AdminWarrantyController::class, 'view'])->name('admin.warranty.view');
+    Route::get('/projects/{project}/warranty/download', [\App\Http\Controllers\Admin\AdminWarrantyController::class, 'view'])->name('admin.warranty.download');
 
     // Settings Route
-    Route::get('/settings', [SettingsController::class, 'index'])->name('admin.settings');
-    Route::post('/settings', [SettingsController::class, 'update'])->name('admin.settings.update');
+    Route::get('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('admin.settings');
+    Route::post('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('admin.settings.update');
 });
 
 // ============================================
@@ -197,15 +183,15 @@ Route::middleware(['auth:web', 'verified', 'checkRole:supervisor'])->prefix('sup
     Route::post('/zones/{projectRoom}/duplicate', [ProjectRoomController::class, 'duplicate'])->name('zones.duplicate');
 
     // Screen E: Summary
-    Route::get('/projects/{project}/summary', [SummaryController::class, 'show'])->name('summary');
-    Route::post('/projects/{project}/save-notes', [SummaryController::class, 'saveNotes'])->name('summary.save-notes');
-    Route::post('/projects/{project}/finalize', [SummaryController::class, 'finalize'])->name('finalize');
-    Route::get('/projects/{project}/pdf', [SummaryController::class, 'generatePdf'])->name('pdf');
-    Route::post('/projects/{project}/send-whatsapp', [SummaryController::class, 'sendWhatsAppMessage'])->name('summary.send-whatsapp');
+    Route::get('/projects/{project}/summary', [\App\Http\Controllers\Supervisor\SummaryController::class, 'show'])->name('summary');
+    Route::post('/projects/{project}/save-notes', [\App\Http\Controllers\Supervisor\SummaryController::class, 'saveNotes'])->name('summary.save-notes');
+    Route::post('/projects/{project}/finalize', [\App\Http\Controllers\Supervisor\SummaryController::class, 'finalize'])->name('finalize');
+    Route::get('/projects/{project}/pdf', [\App\Http\Controllers\Supervisor\SummaryController::class, 'generatePdf'])->name('pdf');
+    Route::post('/projects/{project}/send-whatsapp', [\App\Http\Controllers\Supervisor\SummaryController::class, 'sendWhatsAppMessage'])->name('summary.send-whatsapp');
 
     // Coupon Routes
-    Route::post('/projects/{project}/apply-coupon', [CouponApplyController::class, 'apply'])->name('projects.apply-coupon');
-    Route::post('/projects/{project}/remove-coupon', [CouponApplyController::class, 'remove'])->name('projects.remove-coupon');
+    Route::post('/projects/{project}/apply-coupon', [\App\Http\Controllers\Supervisor\CouponApplyController::class, 'apply'])->name('projects.apply-coupon');
+    Route::post('/projects/{project}/remove-coupon', [\App\Http\Controllers\Supervisor\CouponApplyController::class, 'remove'])->name('projects.remove-coupon');
 
     // Payment Routes - Supervisor can confirm cash payments
     Route::post('/projects/{project}/confirm-cash-booking', [SupervisorPaymentController::class, 'confirmCashBooking'])->name('projects.confirm-cash-booking');
@@ -222,7 +208,7 @@ Route::middleware(['auth:web', 'verified', 'checkRole:supervisor'])->prefix('sup
     Route::delete('/projects/{project}/photos/{photo}', [ProjectPhotoController::class, 'destroy'])->name('photos.destroy');
 
     // Warranty Routes (Read-only for Supervisor)
-    Route::get('/projects/{project}/warranty', [AdminWarrantyController::class, 'view'])->name('warranty.view');
+    Route::get('/projects/{project}/warranty', [\App\Http\Controllers\Admin\AdminWarrantyController::class, 'view'])->name('warranty.view');
 
     // Logout
     Route::post('/logout', [SupervisorAuthController::class, 'destroy'])->name('logout');
@@ -240,72 +226,72 @@ Route::middleware('auth')->group(function () {
 // ============================================
 
 // Customer Login Page
-Route::get('/customer/login', [CustomerAuthController::class, 'showLogin'])
+Route::get('/customer/login', [\App\Http\Controllers\Customer\CustomerAuthController::class, 'showLogin'])
     ->name('customer.login');
 
 // Customer OTP Auth Routes (Public) - wrapped in web middleware for session/CSRF support
 Route::middleware('web')->group(function () {
     Route::prefix('customer/auth')->name('customer.auth.')->group(function () {
-        Route::post('/send-otp', [CustomerAuthController::class, 'sendOtp'])->name('send-otp');
-        Route::post('/verify-otp', [CustomerAuthController::class, 'verifyOtp'])->name('verify-otp');
+        Route::post('/send-otp', [\App\Http\Controllers\Customer\CustomerAuthController::class, 'sendOtp'])->name('send-otp');
+        Route::post('/verify-otp', [\App\Http\Controllers\Customer\CustomerAuthController::class, 'verifyOtp'])->name('verify-otp');
     });
 });
 
 // Customer Protected Routes (all require login)
 Route::middleware(['auth:customer'])->prefix('customer')->name('customer.')->group(function () {
-    Route::get('/dashboard', [CustomerDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [\App\Http\Controllers\Customer\CustomerDashboardController::class, 'index'])->name('dashboard');
 
     // Debug route
-    Route::get('/debug-dashboard', [DebugDashboardController::class, 'index'])->name('debug-dashboard');
+    Route::get('/debug-dashboard', [\App\Http\Controllers\Customer\DebugDashboardController::class, 'index'])->name('debug-dashboard');
 
     // Quote View (Authenticated - no token needed, uses session)
-    Route::get('/quote/{project}', [CustomerQuoteController::class, 'show'])->name('quote.show');
-
+    Route::get('/quote/{project}', [\App\Http\Controllers\Customer\CustomerQuoteController::class, 'show'])->name('quote.show');
+    
     // Send SMS/WhatsApp Quote
-    Route::post('/quote/{project}/send-sms', [CustomerQuoteController::class, 'sendSMS'])->name('quote.send-sms');
+    Route::post('/quote/{project}/send-sms', [\App\Http\Controllers\Customer\CustomerQuoteController::class, 'sendSMS'])->name('quote.send-sms');
 
     // Progress Photos (Authenticated - no token needed)
-    Route::get('/project/{project}/photos', [ProjectPhotoController::class, 'show'])->name('project.photos');
+    Route::get('/project/{project}/photos', [\App\Http\Controllers\Customer\ProjectPhotoController::class, 'show'])->name('project.photos');
 
     // Payment Endpoints (Authenticated only - NoBroker style)
-    Route::get('/project/{project}/milestone/{milestone}', [CustomerPaymentController::class, 'getMilestoneDetails'])->name('project.milestone.details');
-    Route::post('/project/{project}/booking/online', [CustomerPaymentController::class, 'onlineBooking'])->name('project.booking.online');
-    Route::post('/project/{project}/booking/cash', [CustomerPaymentController::class, 'cashBooking'])->name('project.booking.cash');
-    Route::post('/project/{project}/mid-payment', [CustomerPaymentController::class, 'payMidPayment'])->name('project.pay-mid');
-    Route::post('/project/{project}/final-payment', [CustomerPaymentController::class, 'payFinalPayment'])->name('project.pay-final');
+    Route::get('/project/{project}/milestone/{milestone}', [\App\Http\Controllers\Customer\CustomerPaymentController::class, 'getMilestoneDetails'])->name('project.milestone.details');
+    Route::post('/project/{project}/booking/online', [\App\Http\Controllers\Customer\CustomerPaymentController::class, 'onlineBooking'])->name('project.booking.online');
+    Route::post('/project/{project}/booking/cash', [\App\Http\Controllers\Customer\CustomerPaymentController::class, 'cashBooking'])->name('project.booking.cash');
+    Route::post('/project/{project}/mid-payment', [\App\Http\Controllers\Customer\CustomerPaymentController::class, 'payMidPayment'])->name('project.pay-mid');
+    Route::post('/project/{project}/final-payment', [\App\Http\Controllers\Customer\CustomerPaymentController::class, 'payFinalPayment'])->name('project.pay-final');
 
     // Dedicated Payment Page (Checkout Style)
-    Route::get('/payment/{project}/{milestone}', [CustomerPaymentController::class, 'showPaymentPage'])->name('payment.page');
+    Route::get('/payment/{project}/{milestone}', [\App\Http\Controllers\Customer\CustomerPaymentController::class, 'showPaymentPage'])->name('payment.page');
 
     // Online payment callback (PhonePe/other gateways redirect here)
-    Route::match(['get', 'post'], '/payment/callback', [CustomerPaymentController::class, 'paymentCallback'])->name('payment.callback');
+    Route::match(['get', 'post'], '/payment/callback', [\App\Http\Controllers\Customer\CustomerPaymentController::class, 'paymentCallback'])->name('payment.callback');
 
     // Cash Payment Success Page
-    Route::get('/payment/success/{project}/{milestone}', [CustomerPaymentController::class, 'paymentSuccess'])->name('payment.cash-success');
+    Route::get('/payment/success/{project}/{milestone}', [\App\Http\Controllers\Customer\CustomerPaymentController::class, 'paymentSuccess'])->name('payment.cash-success');
 
     // Billing Details
-    Route::post('/project/{project}/billing-details', [CustomerPaymentController::class, 'saveBillingDetails'])->name('project.billing-details');
+    Route::post('/project/{project}/billing-details', [\App\Http\Controllers\Customer\CustomerPaymentController::class, 'saveBillingDetails'])->name('project.billing-details');
 
     // Invoice (View-only - after full payment)
-    Route::get('/project/{project}/invoice', [CustomerInvoiceController::class, 'view'])->name('project.invoice');
-    Route::get('/project/{project}/invoice/download', [CustomerInvoiceController::class, 'download'])->name('project.invoice.download');
+    Route::get('/project/{project}/invoice', [\App\Http\Controllers\Customer\CustomerInvoiceController::class, 'view'])->name('project.invoice');
+    Route::get('/project/{project}/invoice/download', [\App\Http\Controllers\Customer\CustomerInvoiceController::class, 'download'])->name('project.invoice.download');
 
     // Warranty (View-only - after full payment and work completion)
-    Route::get('/project/{project}/warranty', [CustomerWarrantyController::class, 'view'])->name('project.warranty');
+    Route::get('/project/{project}/warranty', [\App\Http\Controllers\Customer\CustomerWarrantyController::class, 'view'])->name('project.warranty');
 
     // Payment History
-    Route::get('/payment-history', [CustomerDashboardController::class, 'paymentHistory'])->name('payment.history');
+    Route::get('/payment-history', [\App\Http\Controllers\Customer\CustomerDashboardController::class, 'paymentHistory'])->name('payment.history');
 
     // Work Progress
-    Route::get('/work-progress', [CustomerDashboardController::class, 'workProgress'])->name('work.progress');
+    Route::get('/work-progress', [\App\Http\Controllers\Customer\CustomerDashboardController::class, 'workProgress'])->name('work.progress');
 
     // Profile
-    Route::get('/profile', [CustomerProfileController::class, 'index'])->name('profile');
-    Route::patch('/profile', [CustomerProfileController::class, 'update'])->name('profile.update');
+    Route::get('/profile', [\App\Http\Controllers\Customer\CustomerProfileController::class, 'index'])->name('profile');
+    Route::patch('/profile', [\App\Http\Controllers\Customer\CustomerProfileController::class, 'update'])->name('profile.update');
 });
 
 // Customer Logout Route (POST only, accessible without auth for CSRF handling)
-Route::post('/customer/logout', [CustomerAuthController::class, 'logout'])
+Route::post('/customer/logout', [\App\Http\Controllers\Customer\CustomerAuthController::class, 'logout'])
     ->name('customer.logout')
     ->middleware('web');
 
@@ -314,27 +300,27 @@ Route::post('/customer/logout', [CustomerAuthController::class, 'logout'])
 // ============================================
 
 // CCavenue payment initiation (for any milestone)
-Route::post('/payment/ccavenue/initiate/{project}/{milestone}', [CCavenueController::class, 'initiate'])
+Route::post('/payment/ccavenue/initiate/{project}/{milestone}', [\App\Http\Controllers\Payment\CCavenueController::class, 'initiate'])
     ->name('payment.ccavenue.initiate');
 
 // CCavenue callback URL (called by CCAvenue after payment)
-Route::get('/payment/ccavenue/callback', [CCavenueController::class, 'callback'])
+Route::get('/payment/ccavenue/callback', [\App\Http\Controllers\Payment\CCavenueController::class, 'callback'])
     ->name('payment.ccavenue.callback');
 
 // CCavenue cancel URL (called when user cancels payment)
-Route::get('/payment/ccavenue/cancel', [CCavenueController::class, 'cancel'])
+Route::get('/payment/ccavenue/cancel', [\App\Http\Controllers\Payment\CCavenueController::class, 'cancel'])
     ->name('payment.ccavenue.cancel');
 
 // Payment success page
-Route::get('/payment/success/{project}', [CCavenueController::class, 'success'])
+Route::get('/payment/success/{project}', [\App\Http\Controllers\Payment\CCavenueController::class, 'success'])
     ->name('payment.success');
 
 // Payment failed page
-Route::get('/payment/failed', [CCavenueController::class, 'failed'])
+Route::get('/payment/failed', [\App\Http\Controllers\Payment\CCavenueController::class, 'failed'])
     ->name('payment.failed');
 
 // Get CCAvenue config (for frontend)
-Route::get('/payment/ccavenue/config', [CCavenueController::class, 'getConfig'])
+Route::get('/payment/ccavenue/config', [\App\Http\Controllers\Payment\CCavenueController::class, 'getConfig'])
     ->name('payment.ccavenue.config');
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

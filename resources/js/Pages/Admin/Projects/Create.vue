@@ -1,6 +1,5 @@
 <script setup>
 import { useForm, Link } from '@inertiajs/vue3';
-import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { ref } from 'vue';
 
 const props = defineProps({
@@ -30,7 +29,7 @@ const submit = () => {
 </script>
 
 <template>
-    <AdminLayout class="">
+    <AdminLayout class="container mx-auto max-w-4xl">
         <div class="mb-6">
             <Link
                 :href="route('admin.projects.index')"

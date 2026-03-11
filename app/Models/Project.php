@@ -104,10 +104,10 @@ class Project extends Model
     public const WORK_STATUS_COMPLETED = 'COMPLETED';
     public const WORK_STATUS_CLOSED = 'CLOSED';
 
-    // protected static function booted()
-    // {
-    //     static::addGlobalScope(new ProjectVisibilityScope);
-    // }
+    protected static function booted()
+    {
+        static::addGlobalScope(new ProjectVisibilityScope);
+    }
 
     public function rooms()
     {
