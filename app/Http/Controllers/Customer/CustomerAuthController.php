@@ -113,6 +113,7 @@ class CustomerAuthController extends Controller
         $phone = $this->formatPhoneNumber($request->phone);
         $otp = $request->otp;
 
+        // Find valid OTP record
         $otpRecord = CustomerOtp::findValidOtp($phone);
 
         if (!$otpRecord) {
@@ -122,6 +123,7 @@ class CustomerAuthController extends Controller
             ], 422);
         }
 
+        // Verify OTP using hash comparison
         if (!$otpRecord->matches($otp)) {
             return response()->json([
                 'success' => false,
@@ -129,6 +131,7 @@ class CustomerAuthController extends Controller
             ], 422);
         }
 
+        // Find or create customer (no quote check required - any phone can login)
         $customer = Customer::where('phone', $phone)->first();
 
         if (!$customer) {

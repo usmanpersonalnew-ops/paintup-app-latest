@@ -3,7 +3,6 @@
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminProjectWorkController;
 use App\Http\Controllers\Admin\CouponController;
-use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\GoogleDriveController;
 use App\Http\Controllers\Admin\InquiryController;
 use App\Http\Controllers\Admin\InvoiceController;
@@ -24,7 +23,6 @@ use App\Http\Controllers\Supervisor\ProjectPhotoController;
 use App\Http\Controllers\Supervisor\ProjectRoomController;
 use App\Http\Controllers\Supervisor\QuoteItemController;
 use App\Http\Controllers\Supervisor\ServiceController;
-use App\Http\Controllers\Supervisor\SupervisorAuthController;
 use App\Http\Controllers\Supervisor\SupervisorProjectWorkController;
 use App\Http\Controllers\Supervisor\ZoneDashboardController;
 use App\Http\Controllers\TierController;
@@ -41,15 +39,15 @@ Route::get('/', function () {
 // ============================================
 
 // Supervisor Login Page
-// Route::get('/supervisor/login', [SupervisorAuthController::class, 'create'])
-//     ->name('supervisor.login')
-//     ->middleware('guest');
+Route::get('/supervisor/login', [\App\Http\Controllers\Supervisor\SupervisorAuthController::class, 'create'])
+    ->name('supervisor.login')
+    ->middleware('guest');
 
-// // Supervisor Login Handle (Public - wrapped in web for session/CSRF)
-// Route::middleware('web')->group(function () {
-//     Route::post('/supervisor/login', [SupervisorAuthController::class, 'store'])
-//         ->name('supervisor.login.store');
-// });
+// Supervisor Login Handle (Public - wrapped in web for session/CSRF)
+Route::middleware('web')->group(function () {
+    Route::post('/supervisor/login', [\App\Http\Controllers\Supervisor\SupervisorAuthController::class, 'store'])
+        ->name('supervisor.login.store');
+});
 
 // ============================================
 // ADMIN ROUTES - Uses auth:admin guard
@@ -75,7 +73,6 @@ Route::prefix('admin')->middleware(['auth:web', 'verified', 'checkRole:admin'])-
 
     // User CRUD
     Route::resource('users', UserController::class)->names('admin.users');
-    Route::resource('customers', CustomerController::class)->names('admin.customers');
 
     // User Custom Actions
     Route::post('/users/{user}/activate', [UserController::class, 'activate'])->name('admin.users.activate');
@@ -211,9 +208,23 @@ Route::middleware(['auth:web', 'verified', 'checkRole:supervisor'])->prefix('sup
     Route::get('/projects/{project}/warranty', [\App\Http\Controllers\Admin\AdminWarrantyController::class, 'view'])->name('warranty.view');
 
     // Logout
-    Route::post('/logout', [SupervisorAuthController::class, 'destroy'])->name('logout');
+    Route::post('/logout', [\App\Http\Controllers\Supervisor\SupervisorAuthController::class, 'destroy'])->name('logout');
 });
 
+// Dashboard redirect - role-based redirect
+Route::get('/dashboard', function () {
+    $user = \Illuminate\Support\Facades\Auth::user();
+    if ($user) {
+        if ($user->role === 'ADMIN') {
+            return redirect()->intended('/admin/projects');
+        }
+        if ($user->role === 'SUPERVISOR') {
+            return redirect()->intended('/supervisor/projects');
+        }
+    }
+    // If no user or invalid role, redirect to login
+    return redirect()->route('login');
+})->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
