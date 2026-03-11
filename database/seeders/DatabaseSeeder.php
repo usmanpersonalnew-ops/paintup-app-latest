@@ -8,16 +8,11 @@ use App\Models\MasterSurface;
 use App\Models\MasterProduct;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Role; // <--- ADD THIS
 
 class DatabaseSeeder extends Seeder
 {
     public function run()
     {
-        // 0. Create Spatie Roles First
-        $adminRole = Role::firstOrCreate(['name' => 'admin']);
-        $supervisorRole = Role::firstOrCreate(['name' => 'supervisor']);
-
         // 0. Create Default Settings
         Setting::firstOrCreate(
             ['id' => 1],
@@ -29,8 +24,8 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // 1. Create ADMIN
-        $admin = User::updateOrCreate(
+        // 1. Create ADMIN (The fallback)
+        User::updateOrCreate(
             ['email' => 'admin@paintup.in'],
             [
                 'name' => 'Admin',
@@ -38,21 +33,19 @@ class DatabaseSeeder extends Seeder
                 'role' => 'ADMIN'
             ]
         );
-        $admin->assignRole($adminRole); // <--- ASSIGN SPATIE ROLE
 
-        // 2. Create USMAN
-        $usman = User::updateOrCreate(
+        // 2. Create USMAN (Your Account - PERMANENT)
+        User::updateOrCreate(
             ['email' => 'usman@paintup.in'],
             [
                 'name' => 'Usman',
                 'password' => Hash::make('password123'),
-                'role' => 'ADMIN' 
+                'role' => 'ADMIN' // Giving you Admin powers
             ]
         );
-        $usman->assignRole($adminRole); // <--- ASSIGN SPATIE ROLE
 
         // 3. Create SUPERVISOR
-        $supervisor = User::updateOrCreate(
+        User::updateOrCreate(
             ['email' => 'rahul@paintup.in'],
             [
                 'name' => 'Rahul Supervisor',
@@ -60,9 +53,8 @@ class DatabaseSeeder extends Seeder
                 'role' => 'SUPERVISOR'
             ]
         );
-        $supervisor->assignRole($supervisorRole); // <--- ASSIGN SPATIE ROLE
 
-        // 4. Create Master Data
+        // 4. Create Master Data (So the app isn't empty)
         if(MasterSurface::count() == 0) {
             MasterSurface::create(['name' => 'Interior Wall', 'category' => 'INTERIOR', 'unit_type' => 'AREA']);
             MasterSurface::create(['name' => 'Ceiling', 'category' => 'INTERIOR', 'unit_type' => 'AREA']);
