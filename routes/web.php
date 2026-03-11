@@ -184,7 +184,6 @@ Route::middleware(['auth:web', 'verified', 'checkRole:supervisor'])->prefix('sup
     Route::put('/zones/{projectRoom}/paint/{item}', [QuoteItemController::class, 'update'])->name('zones.paint.update');
     Route::get('/products/{product}/systems', [QuoteItemController::class, 'getSystems'])->name('products.systems');
 
-    
     // Screen D: Service/Repair
     Route::get('/zones/{projectRoom}/service', [ServiceController::class, 'create'])->name('zones.service.create');
     Route::post('/zones/{projectRoom}/service', [ServiceController::class, 'store'])->name('zones.service.store');
