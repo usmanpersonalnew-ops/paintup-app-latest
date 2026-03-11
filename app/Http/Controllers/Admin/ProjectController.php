@@ -80,10 +80,10 @@ class ProjectController extends Controller
             'final_payment_amount' => $grandTotal > 0 ? round($grandTotal * 0.20, 2) : 0,
         ];
 
-        $user = User::findOrCreate([
+        User::create([
             'name' => $validated['client_name'],
             'phone' => $validated['phone'],
-            'email' => $validated['email'] ?? null,
+            'email' => $validated['email'],
             'status' => 'ACTIVE',
         ]);
 
