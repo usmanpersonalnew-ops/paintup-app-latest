@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 
 class CustomerController extends Controller
 {
@@ -15,7 +14,7 @@ class CustomerController extends Controller
     public function index()
     {
         $customers = User::role('customer')->latest()->paginate(10);
-        return Inertia::render('Admin/Customers/Index', ['customers' => $customers]);
+        return view('Admin.Customers.Index', compact('customers'));
     }
 
     /**
