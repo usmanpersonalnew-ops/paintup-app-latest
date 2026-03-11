@@ -184,7 +184,7 @@ Route::middleware(['auth:web', 'verified', 'checkRole:supervisor'])->prefix('sup
     Route::put('/zones/{projectRoom}/paint/{item}', [QuoteItemController::class, 'update'])->name('zones.paint.update');
     Route::get('/products/{product}/systems', [QuoteItemController::class, 'getSystems'])->name('products.systems');
 
-    
+
     // Screen D: Service/Repair
     Route::get('/zones/{projectRoom}/service', [ServiceController::class, 'create'])->name('zones.service.create');
     Route::post('/zones/{projectRoom}/service', [ServiceController::class, 'store'])->name('zones.service.store');
@@ -193,7 +193,7 @@ Route::middleware(['auth:web', 'verified', 'checkRole:supervisor'])->prefix('sup
 
     // Service store with FormData (for Zones/Show.vue modal)
     Route::post('/zones/{projectRoom}/services', [ServiceController::class, 'storeFormData'])->name('zones.services.store');
-    
+
     // Duplicate Zone
     Route::post('/zones/{projectRoom}/duplicate', [ProjectRoomController::class, 'duplicate'])->name('zones.duplicate');
 
@@ -274,7 +274,7 @@ Route::middleware(['auth:customer'])->prefix('customer')->name('customer.')->gro
     Route::post('/project/{project}/booking/online', [CustomerPaymentController::class, 'onlineBooking'])->name('project.booking.online');
     Route::post('/project/{project}/booking/cash', [CustomerPaymentController::class, 'cashBooking'])->name('project.booking.cash');
     Route::post('/project/{project}/mid-payment', [CustomerPaymentController::class, 'payMidPayment'])->name('project.pay-mid');
-        Route::post('/project/{orderId}/mid-payment', [CustomerPaymentController::class, 'checkAndUpdateStatus'])->name('project.pay-update');
+    Route::post('/project/{orderId}/mid-payment', [CustomerPaymentController::class, 'checkAndUpdateStatus'])->name('project.pay-update');
     Route::post('/project/{project}/final-payment', [CustomerPaymentController::class, 'payFinalPayment'])->name('project.pay-final');
 
     // Dedicated Payment Page (Checkout Style)
@@ -282,6 +282,23 @@ Route::middleware(['auth:customer'])->prefix('customer')->name('customer.')->gro
 
     // Online payment callback (PhonePe/other gateways redirect here)
     Route::match(['get', 'post'], '/payment/callback', [CustomerPaymentController::class, 'paymentCallback'])->name('payment.callback');
+
+    Route::get(
+        '/payment/callback/{gateway}',
+        [CustomerPaymentController::class, 'callback']
+    )->name('customer.payment.callback');
+
+    Route::get('/payment/success', function () {
+        return "Payment Successful";
+    })->name('customer.payment.success');
+
+    Route::get('/payment/failed', function () {
+        return "Payment Failed";
+    })->name('customer.payment.failed');
+
+    Route::get('/payment/pending', function () {
+        return "Payment Pending";
+    })->name('customer.payment.pending');
 
     // Cash Payment Success Page
     Route::get('/payment/success/{project}/{milestone}', [CustomerPaymentController::class, 'paymentSuccess'])->name('payment.cash-success');
