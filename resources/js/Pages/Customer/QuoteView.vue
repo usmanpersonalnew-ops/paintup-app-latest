@@ -80,19 +80,9 @@ const couponCode = computed(() => props.project?.coupon_code || null);
 const discountAmount = computed(() => Number(props.project?.discount_amount || 0));
 const hasCoupon = computed(() => !!couponCode.value && discountAmount.value > 0);
 
-const gstRate = computed(() => props.project?.gst_rate || 18);
-
 const bookingAmount = computed(() => Math.round(baseTotal.value * 0.40));
 const midAmount = computed(() => Math.round(baseTotal.value * 0.40));
 const finalAmount = computed(() => Math.round(baseTotal.value * 0.20));
-
-const bookingGst = computed(() => formatCurrencyWithDecimals(bookingAmount.value * gstRate.value / 100));
-const midGst = computed(() => formatCurrencyWithDecimals(midAmount.value * gstRate.value / 100));
-const finalGst = computed(() => formatCurrencyWithDecimals(finalAmount.value * gstRate.value / 100));
-
-const bookingTotal = computed(() => formatCurrencyWithDecimals(bookingAmount.value * (1 + gstRate.value / 100)));
-const midTotal = computed(() => formatCurrencyWithDecimals(midAmount.value * (1 + gstRate.value / 100)));
-const finalTotal = computed(() => formatCurrencyWithDecimals(finalAmount.value * (1 + gstRate.value / 100)));
 
 // Payment status
 const isBookingPaid = computed(() => props.project?.booking_status === 'PAID');
@@ -401,7 +391,6 @@ const sendSMS = async () => {
                     <div>
                         <p class="text-sm text-gray-500">Total Amount</p>
                         <p class="text-3xl font-bold text-gray-900">{{ formatCurrency(baseTotal) }}</p>
-                        <p class="text-sm text-gray-500 mt-1">(Excl. GST)</p>
                     </div>
                     <div class="text-right">
                         <p class="text-sm text-gray-500">Rooms</p>
@@ -421,13 +410,6 @@ const sendSMS = async () => {
                         </div>
                         <span class="text-green-600 font-medium">-{{ formatCurrency(discountAmount) }}</span>
                     </div>
-                </div>
-
-                <!-- GST Notice -->
-                <div class="mt-4 p-3 bg-blue-50 rounded-lg">
-                    <p class="text-sm text-blue-700">
-                        ℹ️ GST will be applicable at the time of payment. Amount shown above is excluding GST.
-                    </p>
                 </div>
             </div>
 
@@ -528,7 +510,7 @@ const sendSMS = async () => {
                             <span class="text-2xl mr-3">{{ getMilestoneIcon('booking') }}</span>
                             <div>
                                 <p class="font-medium text-gray-900">Booking (40%)</p>
-                                <p class="text-sm text-gray-500">{{ formatCurrency(bookingAmount) }} + {{ bookingGst }} GST = {{ bookingTotal }}</p>
+                                <p class="text-sm text-gray-500">{{ formatCurrency(bookingAmount) }}</p>
                             </div>
                         </div>
                         <span class="px-3 py-1 rounded-full text-sm font-medium" :class="isBookingPaid ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'">
@@ -542,7 +524,7 @@ const sendSMS = async () => {
                             <span class="text-2xl mr-3">{{ getMilestoneIcon('mid') }}</span>
                             <div>
                                 <p class="font-medium text-gray-900">Mid Payment (40%)</p>
-                                <p class="text-sm text-gray-500">{{ formatCurrency(midAmount) }} + {{ midGst }} GST = {{ midTotal }}</p>
+                                <p class="text-sm text-gray-500">{{ formatCurrency(midAmount) }}</p>
                             </div>
                         </div>
                         <span class="px-3 py-1 rounded-full text-sm font-medium" :class="isMidPaid ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'">
@@ -556,7 +538,7 @@ const sendSMS = async () => {
                             <span class="text-2xl mr-3">{{ getMilestoneIcon('final') }}</span>
                             <div>
                                 <p class="font-medium text-gray-900">Final Payment (20%)</p>
-                                <p class="text-sm text-gray-500">{{ formatCurrency(finalAmount) }} + {{ finalGst }} GST = {{ finalTotal }}</p>
+                                <p class="text-sm text-gray-500">{{ formatCurrency(finalAmount) }}</p>
                             </div>
                         </div>
                         <span class="px-3 py-1 rounded-full text-sm font-medium" :class="isFinalPaid ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'">
@@ -578,7 +560,7 @@ const sendSMS = async () => {
                         :href="getPaymentUrl('booking')"
                         class="block w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-center"
                     >
-                        Pay Booking (40%): {{ bookingTotal }}
+                        Pay Booking (40%): {{ formatCurrency(bookingAmount) }}
                     </a>
 
                     <a
@@ -586,7 +568,7 @@ const sendSMS = async () => {
                         :href="getPaymentUrl('mid')"
                         class="block w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-center"
                     >
-                        Pay Mid (40%): {{ midTotal }}
+                        Pay Mid (40%): {{ formatCurrency(midAmount) }}
                     </a>
 
                     <a
@@ -594,7 +576,7 @@ const sendSMS = async () => {
                         :href="getPaymentUrl('final')"
                         class="block w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg text-center"
                     >
-                        Pay Final (20%): {{ finalTotal }}
+                        Pay Final (20%): {{ formatCurrency(finalAmount) }}
                     </a>
 
                     <div v-if="isFinalPaid" class="p-4 bg-green-50 rounded-lg text-center">
@@ -609,7 +591,6 @@ const sendSMS = async () => {
                 <ul class="text-sm text-gray-600 space-y-1">
                     <li>• Quote is valid for 30 days from the date of issue</li>
                     <li>• Work will commence only after booking amount is paid</li>
-                    <li>• GST will be added at the time of payment as per government regulations</li>
                     <li>• Any additional work not in the quote will be charged extra</li>
                 </ul>
             </div>
